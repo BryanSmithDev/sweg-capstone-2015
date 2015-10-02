@@ -1,4 +1,4 @@
-package edu.uvawise.caremail;
+package edu.uvawise.iris;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
