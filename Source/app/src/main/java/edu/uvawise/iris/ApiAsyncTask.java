@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlaySe
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 
 import com.google.api.services.gmail.model.*;
+import com.google.api.services.gmail.model.Thread;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,11 +63,11 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
     private List<String> getDataFromApi() throws IOException {
         // Get the labels in the user's account.
         String user = "me";
-        List<String> labels = new ArrayList<String>();
-        ListLabelsResponse listResponse =
-                mActivity.mService.users().labels().list(user).execute();
-        for (Label label : listResponse.getLabels()) {
-            labels.add(label.getName());
+        List<String> labels = new ArrayList<>();
+        ListThreadsResponse listResponse =
+                mActivity.mService.users().threads().list(user).execute();
+        for (Thread label : listResponse.getThreads()) {
+            labels.add(label.getSnippet());
         }
         return labels;
     }

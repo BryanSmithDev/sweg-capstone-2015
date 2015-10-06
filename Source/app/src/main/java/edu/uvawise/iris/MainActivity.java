@@ -51,7 +51,9 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = { GmailScopes.MAIL_GOOGLE_COM, GmailScopes.GMAIL_MODIFY };
+    private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
+                                            GmailScopes.GMAIL_READONLY,
+                                            GmailScopes.GMAIL_MODIFY};
 
     /**
      * Create the main activity.
