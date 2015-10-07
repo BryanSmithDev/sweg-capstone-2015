@@ -26,7 +26,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.util.Arrays;
@@ -41,8 +44,6 @@ public class MainActivity extends AppCompatActivity {
     com.google.api.services.gmail.Gmail mService;
 
     GoogleAccountCredential credential;
-    private TextView mStatusText;
-    private TextView mResultsText;
     ProgressDialog mProgress;
     final HttpTransport transport = AndroidHttp.newCompatibleTransport();
     final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
@@ -62,35 +63,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        LinearLayout activityLayout = new LinearLayout(this);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT);
-        activityLayout.setLayoutParams(lp);
-        activityLayout.setOrientation(LinearLayout.VERTICAL);
-        activityLayout.setPadding(16, 16, 16, 16);
-
-        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-
-        mStatusText = new TextView(this);
-        mStatusText.setLayoutParams(tlp);
-        mStatusText.setTypeface(null, Typeface.BOLD);
-        mStatusText.setText("Retrieving data...");
-        activityLayout.addView(mStatusText);
-
-        mResultsText = new TextView(this);
-        mResultsText.setLayoutParams(tlp);
-        mResultsText.setPadding(16, 16, 16, 16);
-        mResultsText.setVerticalScrollBarEnabled(true);
-        mResultsText.setMovementMethod(new ScrollingMovementMethod());
-        activityLayout.addView(mResultsText);
+        setContentView(R.layout.activity_main);
 
         mProgress = new ProgressDialog(this);
         mProgress.setMessage("Calling Gmail API ...");
 
-        setContentView(activityLayout);
+
 
         // Initialize credentials and service object.
         SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
@@ -116,8 +94,7 @@ public class MainActivity extends AppCompatActivity {
         if (isGooglePlayServicesAvailable()) {
             refreshResults();
         } else {
-            mStatusText.setText("Google Play Services required: " +
-                    "after installing, close and relaunch this app.");
+           // mStatusText.setText("Google Play Services required: after installing, close and relaunch this app.");
         }
     }
 
@@ -155,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
                         editor.commit();
                     }
                 } else if (resultCode == RESULT_CANCELED) {
-                    mStatusText.setText("Account unspecified.");
+                    //mStatusText.setText("Account unspecified.");
                 }
                 break;
             case REQUEST_AUTHORIZATION:
@@ -181,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                 mProgress.show();
                 new ApiAsyncTask(this).execute();
             } else {
-                mStatusText.setText("No network connection available.");
+                //mStatusText.setText("No network connection available.");
             }
         }
     }
@@ -195,8 +172,8 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mStatusText.setText("Retrieving data…");
-                mResultsText.setText("");
+                //mStatusText.setText("Retrieving data…");
+                //mResultsText.setText("");
             }
         });
     }
@@ -212,13 +189,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (dataStrings == null) {
-                    mStatusText.setText("Error retrieving data!");
+                    //mStatusText.setText("Error retrieving data!");
                 } else if (dataStrings.size() == 0) {
-                    mStatusText.setText("No data found.");
+                    //mStatusText.setText("No data found.");
                 } else {
-                    mStatusText.setText("Data retrieved using" +
-                            " the Gmail API:");
-                    mResultsText.setText(TextUtils.join("\n\n", dataStrings));
+                   // mStatusText.setText("Data retrieved using" +
+                     //       " the Gmail API:");
+                    //mResultsText.setText(TextUtils.join("\n\n", dataStrings));
+                    ListAdapter adapter = new ArrayAdapter<String>(getBaseContext(),android.R.layout.simple_list_item_1,dataStrings);
+                    ListView view = (ListView)findViewById(R.id.emailList);
+                    view.setAdapter(adapter);
                 }
             }
         });
@@ -233,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mStatusText.setText(message);
+                //mStatusText.setText(message);
             }
         });
     }
