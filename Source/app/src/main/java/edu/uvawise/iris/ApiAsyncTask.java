@@ -1,9 +1,12 @@
 package edu.uvawise.iris;
 
 import android.os.AsyncTask;
+import android.util.Log;
+
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 
+import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
 import com.google.api.services.gmail.model.Thread;
 
@@ -33,7 +36,6 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
     @Override
     protected Void doInBackground(Void... params) {
         try {
-            mActivity.clearResultsText();
             mActivity.updateResultsText(getDataFromApi());
 
         } catch (final GooglePlayServicesAvailabilityIOException availabilityException) {
@@ -46,11 +48,8 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
                     MainActivity.REQUEST_AUTHORIZATION);
 
         } catch (Exception e) {
-            mActivity.updateStatus("The following error occurred:\n" +
+            Log.e("ERROR", "The following error occurred:\n" +
                     e.getMessage());
-        }
-        if (mActivity.mProgress.isShowing()) {
-            mActivity.mProgress.dismiss();
         }
         return null;
     }
@@ -63,13 +62,38 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
     private List<String> getDataFromApi() throws IOException {
         // Get the labels in the user's account.
         String user = "me";
-        List<String> labels = new ArrayList<>();
-        ListThreadsResponse listResponse =
-                mActivity.mService.users().threads().list(user).execute();
-        for (Thread label : listResponse.getThreads()) {
-            labels.add(label.getSnippet());
+        List<String> result = new ArrayList<>();
+        List<String> result2 = new ArrayList<>();
+        List<Message> messages = new ArrayList<>();
+        Gmail.Users.Messages.List mailList =
+                mActivity.mService.users().messages().list(user).setQ("in:inbox !is:chat")
+                        .setIncludeSpamTrash(false);
+
+        ListMessagesResponse response = mailList.execute();
+
+
+        while (response.getMessages() != null) {
+            messages.addAll(response.getMessages());
+            if (response.getNextPageToken() != null) {
+                response = mailList.setPageToken(response.getNextPageToken()).execute();
+            } else {
+                break;
+            }
         }
-        return labels;
+
+        for (Message message : messages) {
+            result.add(message.getId());
+        }
+
+        Message msg;
+        int i= 0;
+        for (String id : result) {
+            msg = mActivity.mService.users().messages().get("me",id).setFormat("full").execute();
+            messages.set(i,msg);
+            result2.add(msg.getPayload().getHeaders().get(5).getValue());
+            i++;
+        }
+        return result2;
     }
 
 }

@@ -14,23 +14,20 @@ import com.google.api.services.gmail.GmailScopes;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
-import android.view.ViewGroup;
+
 import android.widget.ArrayAdapter;
-import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.Arrays;
 import java.util.List;
@@ -44,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     com.google.api.services.gmail.Gmail mService;
 
     GoogleAccountCredential credential;
-    ProgressDialog mProgress;
+    SwipeRefreshLayout mSwipeRefreshLayout;
     final HttpTransport transport = AndroidHttp.newCompatibleTransport();
     final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
 
@@ -65,8 +62,23 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mProgress = new ProgressDialog(this);
-        mProgress.setMessage("Calling Gmail API ...");
+        mSwipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
+        mSwipeRefreshLayout.setColorSchemeResources(R.color.primary,R.color.accent);
+
+         /*
+         * Sets up a SwipeRefreshLayout.OnRefreshListener that is invoked when the user
+         * performs a swipe-to-refresh gesture.
+         */
+        mSwipeRefreshLayout.setOnRefreshListener(
+                new SwipeRefreshLayout.OnRefreshListener() {
+                    @Override
+                    public void onRefresh() {
+                        // This method performs the actual data-refresh operation.
+                        // The method calls setRefreshing(false) when it's finished.
+                        refreshResults();
+                    }
+                }
+        );
 
 
 
@@ -79,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
 
         mService = new com.google.api.services.gmail.Gmail.Builder(
                 transport, jsonFactory, credential)
-                .setApplicationName("Gmail API Android Quickstart")
+                .setApplicationName(getString(R.string.app_name))
                 .build();
     }
 
@@ -92,9 +104,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (isGooglePlayServicesAvailable()) {
-            refreshResults();
-        } else {
-           // mStatusText.setText("Google Play Services required: after installing, close and relaunch this app.");
+            boolean start = mSwipeRefreshLayout.post(new Runnable() {
+                @Override
+                public void run() {
+                    mSwipeRefreshLayout.setRefreshing(true);
+                }
+            });
+            if (start) refreshResults();
         }
     }
 
@@ -131,9 +147,7 @@ public class MainActivity extends AppCompatActivity {
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
                         editor.commit();
                     }
-                } else if (resultCode == RESULT_CANCELED) {
-                    //mStatusText.setText("Account unspecified.");
-                }
+                } else if (resultCode == RESULT_CANCELED) {}
                 break;
             case REQUEST_AUTHORIZATION:
                 if (resultCode != RESULT_OK) {
@@ -155,27 +169,11 @@ public class MainActivity extends AppCompatActivity {
             chooseAccount();
         } else {
             if (isDeviceOnline()) {
-                mProgress.show();
                 new ApiAsyncTask(this).execute();
             } else {
-                //mStatusText.setText("No network connection available.");
+                Toast.makeText(getApplicationContext(), "No network connection avalible.", Toast.LENGTH_LONG).show();
             }
         }
-    }
-
-    /**
-     * Clear any existing Gmail API data from the TextView and update
-     * the header message; called from background threads and async tasks
-     * that need to update the UI (in the UI thread).
-     */
-    public void clearResultsText() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                //mStatusText.setText("Retrieving data…");
-                //mResultsText.setText("");
-            }
-        });
     }
 
     /**
@@ -189,34 +187,19 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (dataStrings == null) {
-                    //mStatusText.setText("Error retrieving data!");
+                    Toast.makeText(getApplicationContext(), "Error retrieving data!",Toast.LENGTH_LONG);
                 } else if (dataStrings.size() == 0) {
-                    //mStatusText.setText("No data found.");
+                    Toast.makeText(getApplicationContext(), "No data found.", Toast.LENGTH_LONG);
                 } else {
-                   // mStatusText.setText("Data retrieved using" +
-                     //       " the Gmail API:");
-                    //mResultsText.setText(TextUtils.join("\n\n", dataStrings));
                     ListAdapter adapter = new ArrayAdapter<String>(getBaseContext(),android.R.layout.simple_list_item_1,dataStrings);
                     ListView view = (ListView)findViewById(R.id.emailList);
                     view.setAdapter(adapter);
+                    mSwipeRefreshLayout.setRefreshing(false);
                 }
             }
         });
     }
 
-    /**
-     * Show a status message in the list header TextView; called from background
-     * threads and async tasks that need to update the UI (in the UI thread).
-     * @param message a String to display in the UI header TextView.
-     */
-    public void updateStatus(final String message) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                //mStatusText.setText(message);
-            }
-        });
-    }
 
     /**
      * Starts an activity in Google Play Services so the user can pick an
@@ -276,5 +259,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
 
 }
