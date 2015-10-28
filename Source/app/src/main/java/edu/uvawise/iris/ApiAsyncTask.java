@@ -6,13 +6,20 @@ import android.util.Log;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 
+import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
 import com.google.api.services.gmail.model.Thread;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
+
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.MimeMessage;
 
 /**
  * An asynchronous task that handles the Gmail API call.
@@ -59,12 +66,18 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
      * @return List of Strings labels.
      * @throws IOException
      */
-    private List<String> getDataFromApi() throws IOException {
+    private List<String> getDataFromApi() throws IOException, MessagingException {
         // Get the labels in the user's account.
         String user = "me";
         List<String> result = new ArrayList<>();
         List<String> result2 = new ArrayList<>();
         List<Message> messages = new ArrayList<>();
+
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+        MimeMessage email;
+        byte[] emailBytes;
+
         Gmail.Users.Messages.List mailList =
                 mActivity.mService.users().messages().list(user).setQ("in:inbox !is:chat")
                         .setIncludeSpamTrash(false);
@@ -81,16 +94,18 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
             }
         }
 
-        for (Message message : messages) {
-            result.add(message.getId());
+        for (Message msg : messages) {
+            result.add(msg.getId());
         }
 
         Message msg;
         int i= 0;
         for (String id : result) {
-            msg = mActivity.mService.users().messages().get("me",id).setFormat("full").execute();
+            msg = mActivity.mService.users().messages().get("me",id).setFormat("raw").execute();
             messages.set(i,msg);
-            result2.add(msg.getPayload().getHeaders().get(5).getValue());
+            emailBytes = Base64.decodeBase64(msg.getRaw());
+            email = new MimeMessage(session, new ByteArrayInputStream(emailBytes));
+            result2.add(email.getSubject());
             i++;
         }
         return result2;
