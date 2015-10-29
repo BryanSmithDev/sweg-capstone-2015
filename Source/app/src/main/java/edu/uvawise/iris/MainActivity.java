@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mSwipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
-        mSwipeRefreshLayout.setColorSchemeResources(R.color.primary,R.color.accent);
+        mSwipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.accent);
 
          /*
          * Sets up a SwipeRefreshLayout.OnRefreshListener that is invoked when the user
@@ -79,7 +79,6 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }
         );
-
 
 
         // Initialize credentials and service object.
@@ -145,7 +144,7 @@ public class MainActivity extends AppCompatActivity {
                                 getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
-                        editor.commit();
+                        editor.apply();
                     }
                 } else if (resultCode == RESULT_CANCELED) {}
                 break;
@@ -171,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             if (isDeviceOnline()) {
                 new ApiAsyncTask(this).execute();
             } else {
-                Toast.makeText(getApplicationContext(), "No network connection avalible.", Toast.LENGTH_LONG).show();
+                Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -187,15 +186,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (dataStrings == null) {
-                    Toast.makeText(getApplicationContext(), "Error retrieving data!",Toast.LENGTH_LONG);
+                    Toast.makeText(getApplicationContext(), "Error retrieving data!",Toast.LENGTH_LONG).show();
                 } else if (dataStrings.size() == 0) {
-                    Toast.makeText(getApplicationContext(), "No data found.", Toast.LENGTH_LONG);
+                    Toast.makeText(getApplicationContext(), "No data found.", Toast.LENGTH_LONG).show();
                 } else {
                     ListAdapter adapter = new ArrayAdapter<String>(getBaseContext(),android.R.layout.simple_list_item_1,dataStrings);
                     ListView view = (ListView)findViewById(R.id.emailList);
                     view.setAdapter(adapter);
-                    mSwipeRefreshLayout.setRefreshing(false);
                 }
+                mSwipeRefreshLayout.setRefreshing(false);
             }
         });
     }

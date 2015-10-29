@@ -9,7 +9,6 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecovera
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
-import com.google.api.services.gmail.model.Thread;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -57,6 +56,7 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
         } catch (Exception e) {
             Log.e("ERROR", "The following error occurred:\n" +
                     e.getMessage());
+            mActivity.updateResultsText(null);
         }
         return null;
     }
