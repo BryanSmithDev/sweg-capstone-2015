@@ -66,11 +66,11 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
      * @return List of Strings labels.
      * @throws IOException
      */
-    private List<String> getDataFromApi() throws IOException, MessagingException {
+    private List<MimeMessage> getDataFromApi() throws IOException, MessagingException {
         // Get the labels in the user's account.
         String user = "me";
         List<String> result = new ArrayList<>();
-        List<String> result2 = new ArrayList<>();
+        List<MimeMessage> result2 = new ArrayList<>();
         List<Message> messages = new ArrayList<>();
 
         Properties props = new Properties();
@@ -105,7 +105,7 @@ public class ApiAsyncTask extends AsyncTask<Void, Void, Void> {
             messages.set(i,msg);
             emailBytes = Base64.decodeBase64(msg.getRaw());
             email = new MimeMessage(session, new ByteArrayInputStream(emailBytes));
-            result2.add(email.getSubject());
+            result2.add(email);
             i++;
         }
         return result2;

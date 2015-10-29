@@ -32,6 +32,10 @@ import android.widget.Toast;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.mail.internet.MimeMessage;
+
+import edu.uvawise.iris.edu.uvawise.iris.adapters.EmailListViewAdapter;
+
 public class MainActivity extends AppCompatActivity {
     /**
      * A Gmail API service object used to access the API.
@@ -181,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
      * UI thread).
      * @param dataStrings a List of Strings to populate the main TextView with.
      */
-    public void updateResultsText(final List<String> dataStrings) {
+    public void updateResultsText(final List<MimeMessage> dataStrings) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -190,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                 } else if (dataStrings.size() == 0) {
                     Toast.makeText(getApplicationContext(), "No data found.", Toast.LENGTH_LONG).show();
                 } else {
-                    ListAdapter adapter = new ArrayAdapter<String>(getBaseContext(),android.R.layout.simple_list_item_1,dataStrings);
+                    ListAdapter adapter = new EmailListViewAdapter(getBaseContext(),dataStrings);
                     ListView view = (ListView)findViewById(R.id.emailList);
                     view.setAdapter(adapter);
                 }
