@@ -24,7 +24,9 @@ import android.content.Context;
 import android.content.SyncResult;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
+import android.widget.Toast;
 
 /**
  * Define a sync adapter for the app.
@@ -74,7 +76,17 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     public void onPerformSync(Account account, Bundle extras, String authority,
                               ContentProviderClient provider, SyncResult syncResult) {
         Log.i(TAG, "Beginning synchronization");
-        //Do Sync here
+
+        // Get a handler that can be used to post to the main thread
+        Handler mainHandler = new Handler(getContext().getMainLooper());
+
+        Runnable myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getContext(),"Sync Ran",Toast.LENGTH_SHORT).show();
+            }
+        };
+        mainHandler.post(myRunnable);
         Log.i(TAG, "Synchronization complete");
     }
 }
