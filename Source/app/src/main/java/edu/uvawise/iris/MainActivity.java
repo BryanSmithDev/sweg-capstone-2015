@@ -24,7 +24,6 @@ import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 
-import android.widget.ArrayAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -34,7 +33,8 @@ import java.util.List;
 
 import javax.mail.internet.MimeMessage;
 
-import edu.uvawise.iris.edu.uvawise.iris.adapters.EmailListViewAdapter;
+import edu.uvawise.iris.adapters.EmailListViewAdapter;
+import edu.uvawise.iris.sync.SyncUtils;
 
 public class MainActivity extends AppCompatActivity {
     /**
@@ -96,6 +96,8 @@ public class MainActivity extends AppCompatActivity {
                 transport, jsonFactory, credential)
                 .setApplicationName(getString(R.string.app_name))
                 .build();
+
+        SyncUtils.CreateSyncAccount(this); //TODO: Remove later
     }
 
 

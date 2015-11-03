@@ -1,4 +1,4 @@
-package edu.uvawise.iris.edu.uvawise.iris.adapters;
+package edu.uvawise.iris.adapters;
 
 import android.content.Context;
 import android.util.Log;
@@ -15,7 +15,6 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.R;
