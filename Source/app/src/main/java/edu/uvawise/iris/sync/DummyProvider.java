@@ -5,6 +5,9 @@ import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 
+/**
+ * This is a dummy content provider. SyncAdapters require a content provider even if you don't use one.
+ */
 public class DummyProvider extends ContentProvider {
 
     @Override

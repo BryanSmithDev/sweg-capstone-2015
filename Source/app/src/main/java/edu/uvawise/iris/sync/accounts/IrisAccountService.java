@@ -58,13 +58,13 @@ public class IrisAccountService extends Service {
 
     @Override
     public void onCreate() {
-        Log.i(TAG, "Service created");
+        Log.i(TAG, "Auth Service created");
         mAuthenticator = new Authenticator(this);
     }
 
     @Override
     public void onDestroy() {
-        Log.i(TAG, "Service destroyed");
+        Log.i(TAG, "Auth Service destroyed");
     }
 
     @Override
