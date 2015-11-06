@@ -73,7 +73,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
      * the sync.
      */
     @Override
-    public void onPerformSync(Account account, Bundle extras, String authority,
+    public void onPerformSync(final Account account, Bundle extras, String authority,
                               ContentProviderClient provider, SyncResult syncResult) {
         Log.i(TAG, "Beginning synchronization");
 
@@ -83,7 +83,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Runnable myRunnable = new Runnable() {
             @Override
             public void run() {
-                Toast.makeText(getContext(),"Sync Ran",Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(),"Sync Ran - "+account.name,Toast.LENGTH_SHORT).show();
             }
         };
         mainHandler.post(myRunnable);

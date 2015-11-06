@@ -97,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
                 .setApplicationName(getString(R.string.app_name))
                 .build();
 
-        SyncUtils.CreateSyncAccount(this); //TODO: Remove later
     }
 
 
@@ -149,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
                         SharedPreferences settings =
                                 getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
+                        SyncUtils.SetupSyncAccount(this, credential.getSelectedAccount()); //TODO: Remove later
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
                         editor.apply();
                     }
