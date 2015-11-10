@@ -2,15 +2,8 @@ package edu.uvawise.iris;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.ExponentialBackOff;
 
-
-import com.google.api.services.gmail.GmailScopes;
 
 import android.accounts.AccountManager;
 import android.app.Dialog;
@@ -24,11 +17,11 @@ import android.os.Bundle;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 
+import android.util.Log;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import java.util.Arrays;
 import java.util.List;
 
 import javax.mail.internet.MimeMessage;
@@ -36,26 +29,21 @@ import javax.mail.internet.MimeMessage;
 import edu.uvawise.iris.adapters.EmailListViewAdapter;
 import edu.uvawise.iris.sync.SyncUtils;
 
+/**
+ * MainActivity - The main activity for the application providing entry. Shows a list of emails.
+ */
 public class MainActivity extends AppCompatActivity {
-    /**
-     * A Gmail API service object used to access the API.
-     * Note: Do not confuse this class with API library's model classes, which
-     * represent specific data structures.
-     */
-    com.google.api.services.gmail.Gmail mService;
 
-    GoogleAccountCredential credential;
-    SwipeRefreshLayout mSwipeRefreshLayout;
-    final HttpTransport transport = AndroidHttp.newCompatibleTransport();
-    final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
+    private static final String TAG = MainActivity.class.getSimpleName();
 
+    GoogleAccountCredential credential; //Our Google(Gmail) account credential
+
+    //Google Constants
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-    private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
-                                            GmailScopes.GMAIL_READONLY,
-                                            GmailScopes.GMAIL_MODIFY};
+
+    SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
 
     /**
      * Create the main activity.
@@ -64,8 +52,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main); //Load main layout xml
 
+        //Find and initialize the swipe-to-refresh view. And set its color scheme.
         mSwipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
         mSwipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.accent);
 
@@ -85,17 +74,10 @@ public class MainActivity extends AppCompatActivity {
         );
 
 
-        // Initialize credentials and service object.
-        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
-        credential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff())
-                .setSelectedAccountName(settings.getString(PREF_ACCOUNT_NAME, null));
-
-        mService = new com.google.api.services.gmail.Gmail.Builder(
-                transport, jsonFactory, credential)
-                .setApplicationName(getString(R.string.app_name))
-                .build();
+        //Setup an initial Google account.
+        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        credential = SyncUtils.getInitialGmailAccountCredential(this)
+                .setSelectedAccountName(settings.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, null));
 
     }
 
@@ -108,13 +90,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (isGooglePlayServicesAvailable()) {
-            boolean start = mSwipeRefreshLayout.post(new Runnable() {
-                @Override
-                public void run() {
-                    mSwipeRefreshLayout.setRefreshing(true);
-                }
-            });
-            if (start) refreshResults();
+           refreshResults();
         }
     }
 
@@ -129,8 +105,7 @@ public class MainActivity extends AppCompatActivity {
      *     activity result.
      */
     @Override
-    protected void onActivityResult(
-            int requestCode, int resultCode, Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch(requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
@@ -139,23 +114,27 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
             case REQUEST_ACCOUNT_PICKER:
+                Log.d(TAG, "Picking Account");
                 if (resultCode == RESULT_OK && data != null &&
                         data.getExtras() != null) {
                     String accountName =
                             data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
+                        Log.d(TAG, "Account Picked - "+accountName );
                         credential.setSelectedAccountName(accountName);
-                        SharedPreferences settings =
-                                getPreferences(Context.MODE_PRIVATE);
+                        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
-                        SyncUtils.SetupSyncAccount(this, credential.getSelectedAccount()); //TODO: Remove later
-                        editor.putString(PREF_ACCOUNT_NAME, accountName);
+                        editor.putString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, accountName);
                         editor.apply();
+                        SyncUtils.enableSync(this);
                     }
-                } else if (resultCode == RESULT_CANCELED) {}
+                } else if (resultCode == RESULT_CANCELED) {
+                    Toast.makeText(this,R.string.error_no_account_chosen,Toast.LENGTH_LONG).show();
+                }
                 break;
             case REQUEST_AUTHORIZATION:
                 if (resultCode != RESULT_OK) {
+                    Log.d(TAG, "Requesting Account Auth");
                     chooseAccount();
                 }
                 break;
@@ -170,11 +149,13 @@ public class MainActivity extends AppCompatActivity {
      * user can pick an account.
      */
     private void refreshResults() {
+        if (mSwipeRefreshLayout.isRefreshing()) mSwipeRefreshLayout.setRefreshing(false);
         if (credential.getSelectedAccountName() == null) {
             chooseAccount();
         } else {
             if (isDeviceOnline()) {
-                new ApiAsyncTask(this).execute();
+                SyncUtils.syncNow(this);
+                Toast.makeText(getApplicationContext(), "Working", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
             }
@@ -211,8 +192,7 @@ public class MainActivity extends AppCompatActivity {
      * account.
      */
     private void chooseAccount() {
-        startActivityForResult(
-                credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
+        startActivityForResult(credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
     }
 
     /**

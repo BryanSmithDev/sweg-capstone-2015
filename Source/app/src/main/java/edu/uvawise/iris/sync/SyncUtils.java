@@ -17,12 +17,30 @@
 package edu.uvawise.iris.sync;
 
 import android.accounts.Account;
-import android.annotation.TargetApi;
+import android.accounts.AccountManager;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.os.Build;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
+
+
+import com.google.android.gms.auth.GoogleAuthException;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.GmailScopes;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+
+import edu.uvawise.iris.Constants;
+import edu.uvawise.iris.R;
 
 
 /**
@@ -30,57 +48,206 @@ import android.preference.PreferenceManager;
  */
 public class SyncUtils {
     private static final long SYNC_FREQUENCY = 60 * 3;
-    private static final String CONTENT_AUTHORITY = "edu.uvawise.iris.sync";
-    private static final String PREF_SETUP_COMPLETE = "setup_complete";
-    // Value below must match the account type specified in res/xml/syncadapter.xml
-    public static final String ACCOUNT_TYPE = "com.google";
+
+    private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
+            GmailScopes.GMAIL_READONLY,
+            GmailScopes.GMAIL_MODIFY};
 
     /**
-     * Create an entry for this application in the system account list, if it isn't already there.
+     * Syncs now for the current account.
      *
-     * @param context Context
+     * @param context The context to run in.
      */
-    @TargetApi(Build.VERSION_CODES.FROYO)
-    public static void SetupSyncAccount(Context context, Account account) {
-
-        boolean setupComplete = PreferenceManager
-                .getDefaultSharedPreferences(context).getBoolean(PREF_SETUP_COMPLETE, false);
-
-        // Inform the system that this account supports sync
-        ContentResolver.setIsSyncable(account, CONTENT_AUTHORITY, 1);
-        // Inform the system that this account is eligible for auto sync when the network is up
-        ContentResolver.setSyncAutomatically(account, CONTENT_AUTHORITY, true);
-        // Recommend a schedule for automatic synchronization. The system may modify this based
-        // on other scheduled syncs and network utilization.
-        ContentResolver.addPeriodicSync(
-                account, CONTENT_AUTHORITY, new Bundle(),SYNC_FREQUENCY);
-
-        if (!setupComplete) {
-            TriggerRefresh();
-            PreferenceManager.getDefaultSharedPreferences(context).edit()
-                    .putBoolean(PREF_SETUP_COMPLETE, true).commit();
-        }
-    }
-
-    /**
-     * Helper method to trigger an immediate sync ("refresh").
-     *
-     * <p>This should only be used when we need to preempt the normal sync schedule. Typically, this
-     * means the user has pressed the "refresh" button.
-     *
-     * Note that SYNC_EXTRAS_MANUAL will cause an immediate sync, without any optimization to
-     * preserve battery life. If you know new data is available (perhaps via a GCM notification),
-     * but the user is not actively waiting for that data, you should omit this flag; this will give
-     * the OS additional freedom in scheduling your sync request.
-     */
-    public static void TriggerRefresh() {
+    public static void syncNow(Context context) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        String googleAccount = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "");
         Bundle b = new Bundle();
         // Disable sync backoff and ignore sync preferences. In other words...perform sync NOW!
         b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
         b.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
-        ContentResolver.requestSync(
-                new Account("Account", ACCOUNT_TYPE),        // Sync account
-                CONTENT_AUTHORITY,                           // Content authority
-                b);                                          // Extras
+        for (Account account : accounts) {
+            if (account.name.equals(googleAccount)) {
+                ContentResolver.cancelSync(account, Constants.SYNC_AUTH);
+                ContentResolver.requestSync(account, Constants.SYNC_AUTH, b);
+                break;
+            }
+        }
     }
+
+    /**
+     * Disables syncing.
+     *
+     * @param context The context to run in.
+     */
+    public static void disableSync(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(Constants.PREFS_KEY_GMAIL_SYNCING, false);
+        editor.apply();
+
+        disableSyncForAll(context);
+
+    }
+
+    /**
+     * Disables syncing for all accounts.
+     *
+     * @param context The context to run in.
+     */
+    private static void disableSyncForAll(Context context) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
+        for (Account account : accounts) {
+            ContentResolver.cancelSync(account, Constants.SYNC_AUTH);
+            ContentResolver.setIsSyncable(account, Constants.SYNC_AUTH, 0);
+            ContentResolver.setSyncAutomatically(account, Constants.SYNC_AUTH, false);
+        }
+    }
+
+    /**
+     * Returns true if syncing is active.
+     *
+     * @param context The context to run in.
+     */
+    public static boolean isSyncActive(Context context) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
+        for (Account account : accounts) {
+            if (ContentResolver.isSyncActive(account, Constants.SYNC_AUTH)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Enables syncing.
+     *
+     * @param context The context to run in.
+     */
+    public static void enableSync(Context context) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(Constants.PREFS_KEY_GMAIL_SYNCING, true);
+        editor.apply();
+
+        disableSyncForAll(context);
+
+        ContentResolver.setMasterSyncAutomatically(true);
+
+        // Enable sync for account
+        String googleAccount = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "");
+
+        enableSyncForAccount(new Account(googleAccount, Constants.ACCOUNT_TYPE));
+    }
+
+    /**
+     * Enables syncing for an account.
+     *
+     * @param account The account to enable syncing for.
+     */
+    private static void enableSyncForAccount(Account account) {
+        // Inform the system that this account supports sync
+        ContentResolver.setIsSyncable(account, Constants.SYNC_AUTH, 1);
+        // Inform the system that this account is eligible for auto sync when the network is up
+        ContentResolver.setSyncAutomatically(account, Constants.SYNC_AUTH, true);
+        // Recommend a schedule for automatic synchronization. The system may modify this based
+        // on other scheduled syncs and network utilization.
+        ContentResolver.addPeriodicSync(
+                account, Constants.SYNC_AUTH, new Bundle(), SYNC_FREQUENCY);
+    }
+
+
+    /**
+     *  Show a notification stating that Iris needs permission for the selected account. Clicking
+     *  the notification will prompt them to give access via Google's API
+     * @param context The context to run in.
+     * @param e The permission intent
+     * @param account The account name that needs permission.
+     */
+    public static void permissionNotification(Context context, Intent e, String account){
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                context, 0, e, PendingIntent.FLAG_UPDATE_CURRENT);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context).setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .setContentText(context.getString(R.string.alert_permission_msg, account))
+                .setContentTitle(context.getString(R.string.alert_permission_title))
+                .setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setTicker(context.getString(R.string.alert_permission_title));
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(
+                Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(0, builder.build());
+    }
+
+    /**
+     * Remove a notification from the notification shade.
+     * @param context The context to run in.
+     * @param notificationId The ID of the notification
+     */
+    public static void cancelPermissionNotification(Context context, int notificationId) {
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(
+                Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel(notificationId);
+    }
+
+    /**
+     * Gets the google account credential.
+     *
+     * @param context The context to run in.
+     * @param accountName The name of the account to retrieve.
+     * @param scope The scopes needed from the account.
+     */
+    public static GoogleAccountCredential getGoogleAccountCredential(
+            Context context, String accountName, List<String> scope) throws IOException, GoogleAuthException {
+        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, scope);
+        if (!accountName.equals("")) credential.setSelectedAccountName(accountName);
+        credential.getToken();
+        return credential;
+    }
+
+    /**
+     *  Gets the Google Account Credential with Gmail scopes
+     * @param context The context to run in.
+     * @param accountName The name of the account to retrieve
+     * @throws IOException
+     * @throws GoogleAuthException
+     */
+    public static GoogleAccountCredential getGmailAccountCredential(Context context,String accountName) throws IOException, GoogleAuthException {
+        return getGoogleAccountCredential(context, accountName, Arrays.asList(SCOPES));
+    }
+
+    /**
+     * Get an initial, blank Gmail credential
+     * @param context  The context to run in.
+     * @return
+     */
+    public static GoogleAccountCredential getInitialGmailAccountCredential(Context context){
+        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, Arrays.asList(SCOPES));
+        return credential;
+    }
+
+    /**
+     * Gets the OAuth2 token for the specified account.
+     *
+     * @param context  The context to run in.
+     * @param accountName The account name to get the token for.
+     * @param scope The scopes needed for the account.
+     */
+    public static String getToken(Context context, String accountName, List<String> scope)
+            throws IOException, GoogleAuthException {
+        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, scope);
+        credential.setSelectedAccountName(accountName);
+        return credential.getToken();
+    }
+
+    /**
+     * Gets the Gmail API Service
+     * @param credential The account credential that will give permission to the API
+     * @return The Gmail Service.
+     */
+    public static Gmail getGmailService(GoogleAccountCredential credential){
+       return new com.google.api.services.gmail.Gmail.Builder(
+               AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), credential).build();
+    }
+
+
 }
