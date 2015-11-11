@@ -25,7 +25,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
+import android.util.Log;
 
 
 import com.google.android.gms.auth.GoogleAuthException;
@@ -40,6 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import edu.uvawise.iris.Constants;
+import edu.uvawise.iris.MainActivity;
 import edu.uvawise.iris.R;
 
 
@@ -47,7 +50,9 @@ import edu.uvawise.iris.R;
  * Static helper methods for working with the sync framework.
  */
 public class SyncUtils {
-    private static final long SYNC_FREQUENCY = 60 * 3;
+
+    private static final String TAG = SyncUtils.class.getSimpleName();
+    private static final long SYNC_FREQUENCY = 60;
 
     private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
             GmailScopes.GMAIL_READONLY,
@@ -105,15 +110,37 @@ public class SyncUtils {
     }
 
     /**
-     * Returns true if syncing is active.
+     * Returns true if currently syncing
      *
      * @param context The context to run in.
      */
     public static boolean isSyncActive(Context context) {
         Account[] accounts = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
         for (Account account : accounts) {
+            Log.d(TAG, "Is Sync Active? - " + account.name);
             if (ContentResolver.isSyncActive(account, Constants.SYNC_AUTH)) {
+                Log.d(TAG, "Is Sync Active? - " + account.name + "Yes");
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if sync is enabled.
+     * @param context  The context to run in.
+     */
+    public static boolean isSyncEnabled(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        Account[] am = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
+        for (Account account : am) {
+            Log.d(TAG, "Is Sync Active? - " + account.name);
+            if (sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "").equals(account.name)) {
+
+                int isYourAccountSyncEnabled = ContentResolver.getIsSyncable(account,Constants.SYNC_AUTH);
+                boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
+                Log.d(TAG, "Is Sync Active? - " + account.name + isYourAccountSyncEnabled + "  -  "+isMasterSyncEnabled);
+                if (isMasterSyncEnabled && isYourAccountSyncEnabled==1) return true;
             }
         }
         return false;
@@ -137,7 +164,7 @@ public class SyncUtils {
         // Enable sync for account
         String googleAccount = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "");
 
-        enableSyncForAccount(new Account(googleAccount, Constants.ACCOUNT_TYPE));
+        enableSyncForAccount(context, new Account(googleAccount, Constants.ACCOUNT_TYPE));
     }
 
     /**
@@ -145,7 +172,9 @@ public class SyncUtils {
      *
      * @param account The account to enable syncing for.
      */
-    private static void enableSyncForAccount(Account account) {
+    private static void enableSyncForAccount(Context context, Account account) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        int min = Integer.parseInt(prefs.getString(context.getString(R.string.pref_sync_freq_key), "3"));
         // Inform the system that this account supports sync
         ContentResolver.setIsSyncable(account, Constants.SYNC_AUTH, 1);
         // Inform the system that this account is eligible for auto sync when the network is up
@@ -153,7 +182,7 @@ public class SyncUtils {
         // Recommend a schedule for automatic synchronization. The system may modify this based
         // on other scheduled syncs and network utilization.
         ContentResolver.addPeriodicSync(
-                account, Constants.SYNC_AUTH, new Bundle(), SYNC_FREQUENCY);
+                account, Constants.SYNC_AUTH, new Bundle(), SYNC_FREQUENCY*min);
     }
 
 
@@ -221,8 +250,7 @@ public class SyncUtils {
      * @return
      */
     public static GoogleAccountCredential getInitialGmailAccountCredential(Context context){
-        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, Arrays.asList(SCOPES));
-        return credential;
+        return GoogleAccountCredential.usingOAuth2(context, Arrays.asList(SCOPES));
     }
 
     /**

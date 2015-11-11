@@ -40,6 +40,7 @@ import edu.uvawise.iris.sync.SyncUtils;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.getSimpleName();
+    private SharedPreferences.OnSharedPreferenceChangeListener prefListener;
 
     GoogleAccountCredential credential; //Our Google(Gmail) account credential
 
@@ -87,7 +88,26 @@ public class MainActivity extends AppCompatActivity {
         if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), false)){
             Log.d(TAG,"Keep Screen On Flag - On");
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        } else {Log.d(TAG,"Keep Screen On Flag - Off");}
+        } else {Log.d(TAG, "Keep Screen On Flag - Off");}
+
+
+
+
+        prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+            public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+
+                if(key.equals(getString(R.string.pref_sync_freq_key))) {
+                    Log.d(TAG,"Sync Frequency Changed");
+                    if (SyncUtils.isSyncEnabled(getContext())){
+                        Log.d(TAG,"Sync Frequency was enabled. Re-enabling to use new freq");
+                        SyncUtils.enableSync(getContext());
+                    } else {Log.d(TAG,"Sync wasn't enabled. No need to re-enable.");}
+                }
+
+            }
+        };
+        PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(prefListener);
+
 
     }
 
@@ -282,6 +302,11 @@ public class MainActivity extends AppCompatActivity {
                 dialog.show();
             }
         });
+    }
+
+
+    private Context getContext(){
+        return this;
     }
 
 
