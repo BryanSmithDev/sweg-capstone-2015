@@ -133,14 +133,12 @@ public class SyncUtils {
     public static boolean isSyncEnabled(Context context){
         SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
         Account[] am = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
+        if (!sharedPreferences.getBoolean(Constants.PREFS_KEY_GMAIL_SYNCING,false)) return false;
         for (Account account : am) {
-            Log.d(TAG, "Is Sync Active? - " + account.name);
             if (sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "").equals(account.name)) {
-
-                int isYourAccountSyncEnabled = ContentResolver.getIsSyncable(account,Constants.SYNC_AUTH);
+                boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account,Constants.SYNC_AUTH);
                 boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
-                Log.d(TAG, "Is Sync Active? - " + account.name + isYourAccountSyncEnabled + "  -  "+isMasterSyncEnabled);
-                if (isMasterSyncEnabled && isYourAccountSyncEnabled==1) return true;
+                if (isMasterSyncEnabled && isYourAccountSyncEnabled) return true;
             }
         }
         return false;
