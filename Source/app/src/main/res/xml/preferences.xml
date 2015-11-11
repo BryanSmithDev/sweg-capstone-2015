@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <CheckBoxPreference
+        android:key="@string/pref_keep_screen_on_key"
+        android:title="@string/pref_keep_screen_on_title"
+        android:summary="@string/pref_keep_screen_on_summary"
+        android:defaultValue="false"/>
+
+
+    <ListPreference
+        android:key="@string/pref_sync_freq_key"
+        android:title="@string/pref_sync_freq_title"
+        android:summary="@string/pref_sync_freq_summary"
+        android:entries="@array/sync_freqs"
+        android:entryValues="@array/sync_freqs_values"
+        android:defaultValue='3'/>
+
+
+
+</PreferenceScreen>

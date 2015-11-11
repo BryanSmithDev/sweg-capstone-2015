@@ -5,4 +5,10 @@
     <string name="alert_permission_msg">for account %1$s</string>
     <string name="alert_permission_title">Iris needs permission</string>
     <string name="error_no_account_chosen">No account was chosen.</string>
+    <string name="pref_keep_screen_on_title">Keep Screen On?</string>
+    <string name="pref_keep_screen_on_summary">This will prevent the screen from turning off while Iris is running.</string>
+    <string name="pref_keep_screen_on_key">pref_keep_screen_on</string>
+    <string name="pref_sync_freq_key">pref_sync_freq</string>
+    <string name="pref_sync_freq_title">Sync Frequency</string>
+    <string name="pref_sync_freq_summary">How often do you want to sync data?</string>
 </resources>
