@@ -32,7 +32,7 @@
             android:value="@integer/google_play_services_version" />
 
         <provider
-            android:name=".sync.DummyProvider"
+            android:name=".sync.IrisContentProvider"
             android:authorities="edu.uvawise.iris.sync"
             android:label="@string/app_name"
             android:syncable="true" />
