@@ -29,7 +29,6 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
-
 import com.google.android.gms.auth.GoogleAuthException;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -42,7 +41,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import edu.uvawise.iris.Constants;
-import edu.uvawise.iris.MainActivity;
 import edu.uvawise.iris.R;
 
 

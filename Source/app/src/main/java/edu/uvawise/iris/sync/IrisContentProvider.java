@@ -6,11 +6,11 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.database.SQLException;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
@@ -22,21 +22,21 @@ import java.util.HashMap;
  */
 public class IrisContentProvider extends ContentProvider {
 
-    static final String PROVIDER_NAME = "edu.uvawise.iris.Gmail";
+    static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
     static final String URL = "content://" + PROVIDER_NAME + "/messages";
-    static final Uri CONTENT_URI = Uri.parse(URL);
+    public static final Uri CONTENT_URI = Uri.parse(URL);
 
     static HashMap<String,String> MESSAGES_PROJECTION_MAP;
 
     //Column Names
-    static final String ID = "id";
-    static final String SNIPPET = "snippet";
-    static final String HISTORYID = "historyId";
-    static final String INTERNALDATE = "internalDate";
-    static final String SUBJECT = "subject";
-    static final String FROM = "from";
-    static final String BODY = "body";
-    static final String ISREAD = "isRead";
+    public static final String ID = "_id";
+    public static final String SNIPPET = "snippet";
+    public static final String HISTORYID = "historyId";
+    public static final String INTERNALDATE = "internalDate";
+    public static final String SUBJECT = "subject";
+    public static final String FROM = "_from";
+    public static final String BODY = "body";
+    public static final String ISREAD = "isRead";
 
     static final String[] MESSAGE_PROJECTION = new String[] {
             ID,
@@ -80,13 +80,13 @@ public class IrisContentProvider extends ContentProvider {
     private SQLiteDatabase db;
     static final String DATABASE_NAME = "Gmail";
     static final String TABLE_NAME = "gmailMessages";
-    static final int DATABASE_VERSION = 2;
+    static final int DATABASE_VERSION = 6;
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + TABLE_NAME + "("+
             " "+ID+"           VARCHAR(32) NOT NULL PRIMARY KEY,"+
             " "+SNIPPET+"      VARCHAR(128),"+
-            " "+HISTORYID+"    INTEGER  NOT NULL,"+
-            " "+INTERNALDATE+" INTEGER  NOT NULL,"+
+            " "+HISTORYID+"    VARCHAR(32)  NOT NULL,"+
+            " "+INTERNALDATE+" VARCHAR(32)  NOT NULL,"+
             " "+SUBJECT+"      VARCHAR(256)," +
             " "+FROM+"         VARCHAR(256)," +
             " "+BODY+"         VARCHAR(1024)," +
@@ -129,16 +129,17 @@ public class IrisContentProvider extends ContentProvider {
 
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues values) {
+
         /**
-         * Add a new student record
+         * Add a new record
          */
-        long rowID = db.insert(	TABLE_NAME, "", values);
+        long rowID = db.insertWithOnConflict(TABLE_NAME, "", values, SQLiteDatabase.CONFLICT_REPLACE);
+
 
         /**
          * If record is added successfully
          */
-
-        if (rowID > 0)
+        if (rowID != -1)
         {
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
             getContext().getContentResolver().notifyChange(_uri, null);
@@ -179,7 +180,7 @@ public class IrisContentProvider extends ContentProvider {
 
         if (sortOrder == null || sortOrder == ""){
             /**
-             * By default sort on student names
+             * By default sort on History ID
              */
             sortOrder = HISTORYID;
         }
@@ -273,13 +274,13 @@ public class IrisContentProvider extends ContentProvider {
     public String getType(Uri uri) {
         switch (uriMatcher.match(uri)){
             /**
-             * Get all student records
+             * Get all message records
              */
             case MESSAGES:
                 return "vnd.android.cursor.dir/vnd.iris.messages";
 
             /**
-             * Get a particular student
+             * Get a particular message
              */
             case MSG_ID:
             case MSG_HISTORYID:

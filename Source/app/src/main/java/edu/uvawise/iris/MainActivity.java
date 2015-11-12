@@ -1,46 +1,47 @@
 package edu.uvawise.iris;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-
-
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
-
 import android.preference.PreferenceManager;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
+import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
-
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
-import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import java.util.List;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 
-import javax.mail.internet.MimeMessage;
-
-import edu.uvawise.iris.adapters.EmailListViewAdapter;
+import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.sync.SyncUtils;
 
 /**
  * MainActivity - The main activity for the application providing entry. Shows a list of emails.
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = MainActivity.class.getSimpleName();
-    private SharedPreferences.OnSharedPreferenceChangeListener prefListener;
+
+    SimpleCursorAdapter mAdapter;
+
+    // If non-null, this is the current filter the user has provided.
+    String mCurFilter;
 
     GoogleAccountCredential credential; //Our Google(Gmail) account credential
 
@@ -50,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
 
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
+    ListView mListView;
 
     /**
      * Create the main activity.
@@ -74,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onRefresh() {
                         // This method performs the actual data-refresh operation.
                         // The method calls setRefreshing(false) when it's finished.
-                        refreshResults();
+                        forceSync();
                     }
                 }
         );
@@ -85,30 +87,39 @@ public class MainActivity extends AppCompatActivity {
         credential = SyncUtils.getInitialGmailAccountCredential(this)
                 .setSelectedAccountName(settings.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, null));
 
-        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), false)){
+        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), Constants.PREFS_KEY_SCREEN_ON_DEFAULT)){
             Log.d(TAG,"Keep Screen On Flag - On");
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {Log.d(TAG, "Keep Screen On Flag - Off");}
 
 
-
-
-        prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
+        SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
 
-                if(key.equals(getString(R.string.pref_sync_freq_key))) {
-                    Log.d(TAG,"Sync Frequency Changed");
-                    if (SyncUtils.isSyncEnabled(getContext())){
-                        Log.d(TAG,"Sync Frequency was enabled. Re-enabling to use new freq");
+                if (key.equals(getString(R.string.pref_sync_freq_key))) {
+                    Log.d(TAG, "Sync Frequency Changed");
+                    if (SyncUtils.isSyncEnabled(getContext())) {
+                        Log.d(TAG, "Sync Frequency was enabled. Re-enabling to use new freq");
                         SyncUtils.enableSync(getContext());
-                    } else {Log.d(TAG,"Sync wasn't enabled. No need to re-enable.");}
+                    } else {
+                        Log.d(TAG, "Sync wasn't enabled. No need to re-enable.");
+                    }
                 }
 
             }
         };
         PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(prefListener);
 
+        mListView = (ListView)findViewById(R.id.emailList);
+        mAdapter = new SimpleCursorAdapter(this,
+                R.layout.list_email_item, null,
+                new String[] {IrisContentProvider.SUBJECT,IrisContentProvider.FROM},
+                new int[] { R.id.subjectTextview, R.id.fromTextView }, 0);
+        mListView.setAdapter(mAdapter);
 
+        // Prepare the loader.  Either re-connect with an existing one,
+        // or start a new one.
+        getSupportLoaderManager().initLoader(0, null, this);
     }
 
 
@@ -212,37 +223,30 @@ public class MainActivity extends AppCompatActivity {
         if (credential.getSelectedAccountName() == null) {
             chooseAccount();
         } else {
-            if (isDeviceOnline()) {
-                SyncUtils.syncNow(this);
-                Toast.makeText(getApplicationContext(), "Working", Toast.LENGTH_SHORT).show();
-            } else {
+            if (!isDeviceOnline()) {
                 Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
             }
         }
     }
 
     /**
-     * Fill the data TextView with the given List of Strings; called from
-     * background threads and async tasks that need to update the UI (in the
-     * UI thread).
-     * @param dataStrings a List of Strings to populate the main TextView with.
+     * Perform manual sync
      */
-    public void updateResultsText(final List<MimeMessage> dataStrings) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (dataStrings == null) {
-                    Toast.makeText(getApplicationContext(), "Error retrieving data!",Toast.LENGTH_LONG).show();
-                } else if (dataStrings.size() == 0) {
-                    Toast.makeText(getApplicationContext(), "No data found.", Toast.LENGTH_LONG).show();
+    private void forceSync(){
+        if (mSwipeRefreshLayout.isRefreshing()) mSwipeRefreshLayout.setRefreshing(false);
+        if (credential.getSelectedAccountName() == null) {
+            chooseAccount();
+        } else {
+            if (!isDeviceOnline()) {
+                Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
+            } else {
+                if (SyncUtils.isSyncEnabled(this)) {
+                    SyncUtils.syncNow(this);
                 } else {
-                    ListAdapter adapter = new EmailListViewAdapter(getBaseContext(),dataStrings);
-                    ListView view = (ListView)findViewById(R.id.emailList);
-                    view.setAdapter(adapter);
+                    Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
                 }
-                mSwipeRefreshLayout.setRefreshing(false);
             }
-        });
+        }
     }
 
 
@@ -310,4 +314,40 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        // This is called when a new Loader needs to be created.  This
+        // sample only has one Loader, so we don't care about the ID.
+        // First, pick the base URI to use depending on whether we are
+        // currently filtering.
+        Uri baseUri;
+        if (mCurFilter != null) {
+            baseUri = Uri.withAppendedPath(IrisContentProvider.CONTENT_URI,
+                    Uri.encode(mCurFilter));
+        } else {
+            baseUri = IrisContentProvider.CONTENT_URI;
+        }
+        mSwipeRefreshLayout.setRefreshing(true);
+        // Now create and return a CursorLoader that will take care of
+        // creating a Cursor for the data being displayed.
+        return new CursorLoader(this, baseUri,
+                new String[] {"_id",IrisContentProvider.SUBJECT,IrisContentProvider.FROM}, null, null,
+                null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        // Swap the new cursor in.  (The framework will take care of closing the
+        // old cursor once we return.)
+        mAdapter.swapCursor(data);
+        mSwipeRefreshLayout.setRefreshing(false);
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        // This is called when the last Cursor provided to onLoadFinished()
+        // above is about to be closed.  We need to make sure we are no
+        // longer using it.
+        mAdapter.swapCursor(null);
+    }
 }

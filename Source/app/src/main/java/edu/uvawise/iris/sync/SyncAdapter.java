@@ -20,24 +20,35 @@ import android.accounts.Account;
 import android.annotation.TargetApi;
 import android.content.AbstractThreadedSyncAdapter;
 import android.content.ContentProviderClient;
+import android.content.ContentProviderOperation;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.SyncResult;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
+import android.os.RemoteException;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.ListMessagesResponse;
+import com.google.api.services.gmail.model.Message;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Properties;
 
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.Constants;
 
@@ -131,22 +142,53 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             }
             Log.d(TAG, "Sync Running");
 
+            final ContentResolver contentResolver = context.getContentResolver();
             Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName()).setQ("in:inbox !is:chat")
-                            .setIncludeSpamTrash(false);
-
+                    .setIncludeSpamTrash(false);
             ListMessagesResponse response = mailList.execute();
+            Log.d(TAG,"Messages returned: "+response.getResultSizeEstimate()+"");
 
-            Log.d(TAG,response.getResultSizeEstimate()+"");
-
-            // Get a handler that can be used to post to the main thread
-            Handler mainHandler = new Handler(getContext().getMainLooper());
-            Runnable myRunnable = new Runnable() {
-                @Override
-                public void run() {
-                    Toast.makeText(getContext(),"Sync Ran - "+account.name,Toast.LENGTH_SHORT).show();
+            ArrayList<ContentProviderOperation> batch = new ArrayList<ContentProviderOperation>();
+            Message message;
+            ContentValues values;
+            Properties props = new Properties();
+            Session session = Session.getDefaultInstance(props, null);
+            MimeMessage mimeMessage;
+            for(Message msgID : response.getMessages()){
+                message = gmail.users().messages().get(credential.getSelectedAccountName(),msgID.getId()).setFormat("raw").setFields("historyId,id,internalDate,raw,snippet").execute();
+                try {
+                    mimeMessage = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
+                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
+                            .withValue(IrisContentProvider.ID, message.getId())
+                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
+                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate().toString())
+                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
+                            .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
+                            .withValue(IrisContentProvider.FROM, mimeMessage.getFrom()[0].toString())
+                            .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
+                } catch (MessagingException e) {
+                    e.printStackTrace();
+                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
+                            .withValue(IrisContentProvider.ID, message.getId())
+                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId())
+                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
+                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
+                            .withValue(IrisContentProvider.SUBJECT, "ERROR GETTING SUBJECT")
+                            .withValue(IrisContentProvider.FROM, "ERROR GETTING FROM ADDRESS")
+                            .withValue(IrisContentProvider.BODY,"ERROR GETTING BODY").build());
                 }
-            };
-            mainHandler.post(myRunnable);
+            }
+            try {
+                contentResolver.applyBatch(Constants.SYNC_AUTH, batch);
+                contentResolver.notifyChange(
+                        IrisContentProvider.CONTENT_URI, // URI where data was modified
+                        null,                           // No local observer
+                        false);
+            } catch (RemoteException | OperationApplicationException e) {
+                Log.e(TAG, "Error updating database: " + e.toString());
+                syncResult.databaseError = true;
+                return;
+            }
 
         } catch (UserRecoverableAuthException e) {
             SyncUtils.permissionNotification(context, e.getIntent(), account.name);
