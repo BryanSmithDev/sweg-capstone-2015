@@ -270,7 +270,7 @@ public class SyncUtils {
      */
     public static Gmail getGmailService(GoogleAccountCredential credential){
        return new com.google.api.services.gmail.Gmail.Builder(
-               AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), credential).build();
+               AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), credential).setApplicationName("Iris").build();
     }
 
 

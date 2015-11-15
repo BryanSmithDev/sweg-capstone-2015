@@ -43,11 +43,17 @@ import com.google.api.services.gmail.model.Message;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Properties;
 
 import javax.mail.MessagingException;
 import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MailDateFormat;
 import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.Constants;
@@ -143,10 +149,11 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             Log.d(TAG, "Sync Running");
 
             final ContentResolver contentResolver = context.getContentResolver();
-            Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName()).setQ("in:inbox !is:chat")
+            Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName())
+                    .setFields("messages(id)")
+                    .setQ("in:inbox !is:chat")
                     .setIncludeSpamTrash(false);
             ListMessagesResponse response = mailList.execute();
-            Log.d(TAG,"Messages returned: "+response.getResultSizeEstimate()+"");
 
             ArrayList<ContentProviderOperation> batch = new ArrayList<ContentProviderOperation>();
             Message message;
@@ -154,24 +161,55 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             Properties props = new Properties();
             Session session = Session.getDefaultInstance(props, null);
             MimeMessage mimeMessage;
+
+            Boolean lock = false;
             for(Message msgID : response.getMessages()){
                 message = gmail.users().messages().get(credential.getSelectedAccountName(),msgID.getId()).setFormat("raw").setFields("historyId,id,internalDate,raw,snippet").execute();
                 try {
+                    if (!lock) {
+                        if (message != null){
+                            if (message.getHistoryId() != null) {
+                                Log.i(TAG,message.getHistoryId().toString());
+                                sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID,message.getHistoryId().toString()).apply();
+                                lock = true;
+                            }
+                        }
+
+                    }
+                    String address = "Unknown";
                     mimeMessage = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
+
+                    if (mimeMessage.getFrom()[0] != null){
+                        InternetAddress add;
+                        add = new InternetAddress(mimeMessage.getFrom()[0].toString());
+
+                        if (add.getPersonal() != null){
+                            address = add.getPersonal();
+                        } else if (add.getAddress() != null){
+                            address = add.getAddress();
+                        } else {
+                            address = mimeMessage.getFrom()[0].toString();
+                        }
+
+                    }
+                    Date date = new Date(message.getInternalDate());
+                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
+                            .withValue(IrisContentProvider.ID, message.getId())
+                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
+                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
+                            .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
+                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
+                            .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
+                            .withValue(IrisContentProvider.FROM, address)
+                            .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
+                } catch (MessagingException e) {
+                    Date date = new Date(message.getInternalDate());
+                    e.printStackTrace();
                     batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
                             .withValue(IrisContentProvider.ID, message.getId())
                             .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
                             .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate().toString())
-                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
-                            .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
-                            .withValue(IrisContentProvider.FROM, mimeMessage.getFrom()[0].toString())
-                            .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
-                } catch (MessagingException e) {
-                    e.printStackTrace();
-                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
-                            .withValue(IrisContentProvider.ID, message.getId())
-                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId())
-                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
+                            .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
                             .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
                             .withValue(IrisContentProvider.SUBJECT, "ERROR GETTING SUBJECT")
                             .withValue(IrisContentProvider.FROM, "ERROR GETTING FROM ADDRESS")

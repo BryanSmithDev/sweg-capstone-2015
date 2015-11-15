@@ -87,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         credential = SyncUtils.getInitialGmailAccountCredential(this)
                 .setSelectedAccountName(settings.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, null));
 
-        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), Constants.PREFS_KEY_SCREEN_ON_DEFAULT)){
+        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), Constants.PREFS_SCREEN_ON_DEFAULT)){
             Log.d(TAG,"Keep Screen On Flag - On");
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } else {Log.d(TAG, "Keep Screen On Flag - Off");}
@@ -113,8 +113,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mListView = (ListView)findViewById(R.id.emailList);
         mAdapter = new SimpleCursorAdapter(this,
                 R.layout.list_email_item, null,
-                new String[] {IrisContentProvider.SUBJECT,IrisContentProvider.FROM},
-                new int[] { R.id.subjectTextview, R.id.fromTextView }, 0);
+                new String[] {IrisContentProvider.SUBJECT,IrisContentProvider.FROM,IrisContentProvider.DATE},
+                new int[] { R.id.subjectTextview, R.id.fromTextView, R.id.dateTextView }, 0);
         mListView.setAdapter(mAdapter);
 
         // Prepare the loader.  Either re-connect with an existing one,
@@ -331,7 +331,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // Now create and return a CursorLoader that will take care of
         // creating a Cursor for the data being displayed.
         return new CursorLoader(this, baseUri,
-                new String[] {"_id",IrisContentProvider.SUBJECT,IrisContentProvider.FROM}, null, null,
+                new String[] {"_id",IrisContentProvider.SUBJECT,IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
                 null);
     }
 

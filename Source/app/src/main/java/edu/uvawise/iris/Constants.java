@@ -15,8 +15,11 @@ public abstract class Constants {
     //Shared Preference Keys
     public static final String PREFS_KEY_GMAIL_ACCOUNT_NAME = "GoogleAccount";
     public static final String PREFS_KEY_GMAIL_SYNCING = "GmailSyncing";
+    public static final String PREFS_KEY_GMAIL_HISTORY_ID = "GmailHistoryID";
 
     //Preferences Default Values
-    public static final boolean PREFS_KEY_SCREEN_ON_DEFAULT = false;
+    public static final boolean PREFS_SCREEN_ON_DEFAULT = false;
     public static final int PREFS_SYNC_FREQ_DEFAULT = 3;
+    public static final String PREFS_GMAIL_HISTORY_ID_DEFAULT = "NULL";
+
 }

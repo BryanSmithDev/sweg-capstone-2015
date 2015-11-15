@@ -33,6 +33,7 @@ public class IrisContentProvider extends ContentProvider {
     public static final String SNIPPET = "snippet";
     public static final String HISTORYID = "historyId";
     public static final String INTERNALDATE = "internalDate";
+    public static final String DATE = "_date";
     public static final String SUBJECT = "subject";
     public static final String FROM = "_from";
     public static final String BODY = "body";
@@ -43,6 +44,7 @@ public class IrisContentProvider extends ContentProvider {
             SNIPPET,
             HISTORYID,
             INTERNALDATE,
+            DATE,
             SUBJECT,
             FROM,
             BODY,
@@ -55,10 +57,11 @@ public class IrisContentProvider extends ContentProvider {
     static final int MSG_SNIPPET = 3;
     static final int MSG_HISTORYID = 4;
     static final int MSG_INTERNALDATE = 5;
-    static final int MSG_SUBJECT = 6;
-    static final int MSG_FROM = 7;
-    static final int MSG_BODY = 8;
-    static final int MSG_ISREAD = 9;
+    static final int MSG_DATE = 6;
+    static final int MSG_SUBJECT = 7;
+    static final int MSG_FROM = 8;
+    static final int MSG_BODY = 9;
+    static final int MSG_ISREAD = 10;
 
     static final UriMatcher uriMatcher;
     static{
@@ -68,6 +71,7 @@ public class IrisContentProvider extends ContentProvider {
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_SNIPPET);
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_HISTORYID);
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_INTERNALDATE);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_DATE);
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_SUBJECT);
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_FROM);
         uriMatcher.addURI(PROVIDER_NAME, "messages/#", MSG_BODY);
@@ -80,13 +84,14 @@ public class IrisContentProvider extends ContentProvider {
     private SQLiteDatabase db;
     static final String DATABASE_NAME = "Gmail";
     static final String TABLE_NAME = "gmailMessages";
-    static final int DATABASE_VERSION = 6;
+    static final int DATABASE_VERSION = 7;
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + TABLE_NAME + "("+
             " "+ID+"           VARCHAR(32) NOT NULL PRIMARY KEY,"+
             " "+SNIPPET+"      VARCHAR(128),"+
             " "+HISTORYID+"    VARCHAR(32)  NOT NULL,"+
             " "+INTERNALDATE+" VARCHAR(32)  NOT NULL,"+
+            " "+DATE+" VARCHAR(32),"+
             " "+SUBJECT+"      VARCHAR(256)," +
             " "+FROM+"         VARCHAR(256)," +
             " "+BODY+"         VARCHAR(1024)," +
@@ -170,6 +175,10 @@ public class IrisContentProvider extends ContentProvider {
                 qb.appendWhere( INTERNALDATE + "=" + uri.getPathSegments().get(1));
                 break;
 
+            case MSG_DATE:
+                qb.appendWhere( DATE + "=" + uri.getPathSegments().get(1));
+                break;
+
             case MSG_FROM:
                 qb.appendWhere( FROM + "=" + uri.getPathSegments().get(1));
                 break;
@@ -180,9 +189,9 @@ public class IrisContentProvider extends ContentProvider {
 
         if (sortOrder == null || sortOrder == ""){
             /**
-             * By default sort on History ID
+             * By default sort on date
              */
-            sortOrder = HISTORYID;
+            sortOrder = INTERNALDATE+" DESC";
         }
         Cursor c = qb.query(db,	projection,	selection, selectionArgs,null, null, sortOrder);
 
@@ -217,6 +226,12 @@ public class IrisContentProvider extends ContentProvider {
             case MSG_INTERNALDATE:
                 String intDate = uri.getPathSegments().get(1);
                 count = db.delete( TABLE_NAME, INTERNALDATE +  " = " + intDate +
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
+                break;
+
+            case MSG_DATE:
+                String date = uri.getPathSegments().get(1);
+                count = db.delete( TABLE_NAME, DATE +  " = " + date +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
@@ -258,6 +273,11 @@ public class IrisContentProvider extends ContentProvider {
                         (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
                 break;
 
+            case MSG_DATE:
+                count = db.update(TABLE_NAME, values, DATE + " = " + uri.getPathSegments().get(1) +
+                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                break;
+
             case MSG_FROM:
                 count = db.update(TABLE_NAME, values, FROM + " = " + uri.getPathSegments().get(1) +
                         (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
@@ -285,6 +305,7 @@ public class IrisContentProvider extends ContentProvider {
             case MSG_ID:
             case MSG_HISTORYID:
             case MSG_INTERNALDATE:
+            case MSG_DATE:
             case MSG_FROM:
                 return "vnd.android.cursor.item/vnd.iris.messages";
 
