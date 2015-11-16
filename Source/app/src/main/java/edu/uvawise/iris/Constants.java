@@ -20,6 +20,6 @@ public abstract class Constants {
     //Preferences Default Values
     public static final boolean PREFS_SCREEN_ON_DEFAULT = false;
     public static final int PREFS_SYNC_FREQ_DEFAULT = 3;
-    public static final String PREFS_GMAIL_HISTORY_ID_DEFAULT = "NULL";
+    public static final String PREFS_GMAIL_HISTORY_ID_DEFAULT = null;
 
 }

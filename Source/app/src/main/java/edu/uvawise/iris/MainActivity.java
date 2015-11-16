@@ -219,7 +219,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * user can pick an account.
      */
     private void refreshResults() {
-        if (mSwipeRefreshLayout.isRefreshing()) mSwipeRefreshLayout.setRefreshing(false);
         if (credential.getSelectedAccountName() == null) {
             chooseAccount();
         } else {
@@ -233,7 +232,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * Perform manual sync
      */
     private void forceSync(){
-        if (mSwipeRefreshLayout.isRefreshing()) mSwipeRefreshLayout.setRefreshing(false);
         if (credential.getSelectedAccountName() == null) {
             chooseAccount();
         } else {
@@ -241,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
             } else {
                 if (SyncUtils.isSyncEnabled(this)) {
+                    mSwipeRefreshLayout.setRefreshing(true);
                     SyncUtils.syncNow(this);
                 } else {
                     Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
@@ -322,12 +321,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // currently filtering.
         Uri baseUri;
         if (mCurFilter != null) {
-            baseUri = Uri.withAppendedPath(IrisContentProvider.CONTENT_URI,
+            baseUri = Uri.withAppendedPath(IrisContentProvider.MESSAGES_URI,
                     Uri.encode(mCurFilter));
         } else {
-            baseUri = IrisContentProvider.CONTENT_URI;
+            baseUri = IrisContentProvider.MESSAGES_URI;
         }
-        mSwipeRefreshLayout.setRefreshing(true);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mSwipeRefreshLayout.setRefreshing(true);
+            }
+        });
+
         // Now create and return a CursorLoader that will take care of
         // creating a Cursor for the data being displayed.
         return new CursorLoader(this, baseUri,
@@ -340,7 +345,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // Swap the new cursor in.  (The framework will take care of closing the
         // old cursor once we return.)
         mAdapter.swapCursor(data);
-        mSwipeRefreshLayout.setRefreshing(false);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mSwipeRefreshLayout.setRefreshing(false);
+            }
+        });
     }
 
     @Override

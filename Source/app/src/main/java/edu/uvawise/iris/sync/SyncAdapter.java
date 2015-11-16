@@ -19,14 +19,16 @@ package edu.uvawise.iris.sync;
 import android.accounts.Account;
 import android.annotation.TargetApi;
 import android.content.AbstractThreadedSyncAdapter;
+import android.content.ContentProvider;
 import android.content.ContentProviderClient;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
-import android.content.ContentValues;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.SyncResult;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
@@ -36,24 +38,33 @@ import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.auth.UserRecoverableAuthException;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.History;
+import com.google.api.services.gmail.model.HistoryLabelAdded;
+import com.google.api.services.gmail.model.HistoryLabelRemoved;
+import com.google.api.services.gmail.model.HistoryMessageAdded;
+import com.google.api.services.gmail.model.HistoryMessageDeleted;
+import com.google.api.services.gmail.model.ListHistoryResponse;
 import com.google.api.services.gmail.model.ListMessagesResponse;
 import com.google.api.services.gmail.model.Message;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.text.DateFormat;
+import java.math.BigInteger;
+import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MailDateFormat;
 import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.Constants;
@@ -148,85 +159,18 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             }
             Log.d(TAG, "Sync Running");
 
-            final ContentResolver contentResolver = context.getContentResolver();
-            Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName())
-                    .setFields("messages(id)")
-                    .setQ("in:inbox !is:chat")
-                    .setIncludeSpamTrash(false);
-            ListMessagesResponse response = mailList.execute();
-
-            ArrayList<ContentProviderOperation> batch = new ArrayList<ContentProviderOperation>();
-            Message message;
-            ContentValues values;
-            Properties props = new Properties();
-            Session session = Session.getDefaultInstance(props, null);
-            MimeMessage mimeMessage;
-
-            Boolean lock = false;
-            for(Message msgID : response.getMessages()){
-                message = gmail.users().messages().get(credential.getSelectedAccountName(),msgID.getId()).setFormat("raw").setFields("historyId,id,internalDate,raw,snippet").execute();
-                try {
-                    if (!lock) {
-                        if (message != null){
-                            if (message.getHistoryId() != null) {
-                                Log.i(TAG,message.getHistoryId().toString());
-                                sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID,message.getHistoryId().toString()).apply();
-                                lock = true;
-                            }
-                        }
-
-                    }
-                    String address = "Unknown";
-                    mimeMessage = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
-
-                    if (mimeMessage.getFrom()[0] != null){
-                        InternetAddress add;
-                        add = new InternetAddress(mimeMessage.getFrom()[0].toString());
-
-                        if (add.getPersonal() != null){
-                            address = add.getPersonal();
-                        } else if (add.getAddress() != null){
-                            address = add.getAddress();
-                        } else {
-                            address = mimeMessage.getFrom()[0].toString();
-                        }
-
-                    }
-                    Date date = new Date(message.getInternalDate());
-                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
-                            .withValue(IrisContentProvider.ID, message.getId())
-                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
-                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
-                            .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
-                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
-                            .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
-                            .withValue(IrisContentProvider.FROM, address)
-                            .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
-                } catch (MessagingException e) {
-                    Date date = new Date(message.getInternalDate());
-                    e.printStackTrace();
-                    batch.add(ContentProviderOperation.newInsert(IrisContentProvider.CONTENT_URI)
-                            .withValue(IrisContentProvider.ID, message.getId())
-                            .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
-                            .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate().toString())
-                            .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
-                            .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
-                            .withValue(IrisContentProvider.SUBJECT, "ERROR GETTING SUBJECT")
-                            .withValue(IrisContentProvider.FROM, "ERROR GETTING FROM ADDRESS")
-                            .withValue(IrisContentProvider.BODY,"ERROR GETTING BODY").build());
-                }
-            }
             try {
-                contentResolver.applyBatch(Constants.SYNC_AUTH, batch);
-                contentResolver.notifyChange(
-                        IrisContentProvider.CONTENT_URI, // URI where data was modified
-                        null,                           // No local observer
-                        false);
-            } catch (RemoteException | OperationApplicationException e) {
-                Log.e(TAG, "Error updating database: " + e.toString());
-                syncResult.databaseError = true;
-                return;
+                if (canPartialSync(credential, sharedPreferences)) {
+                    performPartialSync(credential, sharedPreferences);
+                } else {
+                    performFullSync(credential, sharedPreferences);
+                }
+            } catch (MessagingException e) {
+                Log.e(TAG, "Error Syncing");
+            } catch (SocketTimeoutException e) {
+                Log.e(TAG, "Error Syncing");
             }
+
 
         } catch (UserRecoverableAuthException e) {
             SyncUtils.permissionNotification(context, e.getIntent(), account.name);
@@ -236,7 +180,244 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             SyncUtils.permissionNotification(context, e.getIntent(), account.name);
         } catch (IOException e) {
             Log.e(TAG, "IOException", e);
+            syncResult.databaseError = true;
         }
         Log.i(TAG, "Synchronization complete");
     }
+
+    private void performFullSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException{
+
+        final ContentResolver contentResolver = context.getContentResolver();
+
+        contentResolver.delete(IrisContentProvider.MESSAGES_URI, null, null);
+
+        Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName())
+                .setFields("messages(id,historyId)")
+                .setQ("in:inbox !is:chat")
+                .setIncludeSpamTrash(false);
+        ListMessagesResponse response = mailList.execute();
+
+
+        ArrayList<ContentProviderOperation> batch = new ArrayList<>();
+
+        if (response.getMessages() == null) return;
+        BigInteger newHistID = null;
+        BigInteger temp = null;
+        for(Message msgID : response.getMessages()){
+            temp = addMessage(credential,sharedPreferences,msgID.getId(),batch);
+            if (newHistID == null) newHistID = temp;
+        }
+
+        try {
+            contentResolver.applyBatch(Constants.SYNC_AUTH, batch);
+            contentResolver.notifyChange(
+                    IrisContentProvider.MESSAGES_URI, // URI where data was modified
+                    null,                           // No local observer
+                    false);
+            Log.i(TAG, "Setting HistoryID: " + newHistID.toString());
+            sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, newHistID.toString()).apply();
+        } catch (RemoteException | OperationApplicationException e) {
+            Log.e(TAG, "Error updating database: " + e.toString());
+        }
+    }
+
+    private BigInteger getHistoryID(){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        String histString = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, Constants.PREFS_GMAIL_HISTORY_ID_DEFAULT);
+        BigInteger histID = null;
+        if (histString != null) {
+            histID = new BigInteger(histString);
+        }
+        return histID;
+    }
+
+
+    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID) throws IOException{
+        return getHistoryResponse( credential,  histID, null);
+    }
+
+
+    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID, String pageToken) throws IOException{
+        Gmail.Users.History.List list;
+        try {
+            if (histID != null) {
+                list = gmail.users().history().list(credential.getSelectedAccountName())
+                        .setStartHistoryId(histID)
+                        .setLabelId("INBOX")
+                        .setFields("history(labelsAdded,labelsRemoved,messagesAdded,messagesDeleted),historyId,nextPageToken");
+                if (pageToken != null) {
+                    return list.setPageToken(pageToken).execute();
+                } else {
+                    return list.execute();
+                }
+            }
+            return null;
+        } catch (HttpResponseException e){
+            if (e.getStatusCode() == 404){ Log.e(TAG,"ERROR 404-History ID was invalid or expired.");}
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private boolean canPartialSync(GoogleAccountCredential credential,SharedPreferences sharedPreferences) throws IOException{
+        BigInteger histID = getHistoryID();
+        if (histID == null) return false;
+        try {
+            ListHistoryResponse response = getHistoryResponse(credential,histID);
+            if (response != null) {
+                if (response.getNextPageToken() != null) {
+                    //sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, response.getHistoryId().toString()).apply();
+                }
+                return true;
+            }
+        } catch (HttpResponseException e){
+            return false;
+        }
+        return false;
+    }
+
+    private void performPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException{
+        Log.i(TAG,"Performing Partial Sync");
+        final ContentResolver contentResolver = context.getContentResolver();
+        BigInteger histID = getHistoryID();
+
+        if (histID == null){
+            Log.e(TAG,"No history ID available. (Maybe invalid or haven't done a full sync)");
+            return;
+        }
+        Log.i(TAG,"Using history ID: "+histID);
+        ListHistoryResponse response = getHistoryResponse(credential,histID);
+        if (response == null){
+            Log.e(TAG,"No history response.");
+            return;
+        }
+
+        BigInteger newHistID = getHistoryID();
+        ArrayList<ContentProviderOperation> batch = new ArrayList<>();
+        if (response.getHistory() != null){
+            if ( !response.getHistory().isEmpty()) {
+
+
+                ArrayList<Message> addedMessages = new ArrayList<>();
+                ArrayList<Message> deletedMessages = new ArrayList<>();
+
+                List<History> histories = new ArrayList<History>();
+                while (response.getHistory() != null) {
+                    histories.addAll(response.getHistory());
+                    newHistID = response.getHistoryId();
+                    if (response.getNextPageToken() != null) {
+                        String pageToken = response.getNextPageToken();
+                        response = getHistoryResponse(credential, histID, pageToken);
+                    } else {
+                        break;
+                    }
+                }
+
+                for (History hist : histories) {
+                    if (hist.getLabelsAdded() != null) {
+                        for (HistoryLabelAdded msgA : hist.getLabelsAdded()) {
+                            addedMessages.add(msgA.getMessage());
+                        }
+                    }
+                    if (hist.getLabelsRemoved() != null) {
+                        for (HistoryLabelRemoved msgD : hist.getLabelsRemoved()) {
+                            deletedMessages.add(msgD.getMessage());
+                        }
+                    }
+                    if (hist.getMessagesAdded() != null) {
+                        for (HistoryMessageAdded msgA : hist.getMessagesAdded()) {
+                            addedMessages.add(msgA.getMessage());
+                        }
+                    }
+                    if (hist.getMessagesDeleted() != null) {
+                        for (HistoryMessageDeleted msgD : hist.getMessagesDeleted()) {
+                            deletedMessages.add(msgD.getMessage());
+                        }
+                    }
+                }
+
+
+                for (Message msgID : addedMessages) {
+                    addMessage(credential, sharedPreferences, msgID.getId(), batch);
+                }
+
+                for (Message msgID : deletedMessages) {
+                    deleteMessage(contentResolver, msgID.getId(), batch);
+                }
+            }
+        }
+
+        try {
+
+            contentResolver.applyBatch(Constants.SYNC_AUTH, batch);
+            contentResolver.notifyChange(
+                    IrisContentProvider.MESSAGES_URI, // URI where data was modified
+                    null,                           // No local observer
+                    false);
+
+            Log.i(TAG, "Setting HistoryID: " + newHistID.toString());
+            sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, newHistID.toString()).apply();
+        } catch (RemoteException | OperationApplicationException e) {
+            Log.e(TAG, "Error updating database: " + e.toString());
+        }
+
+    }
+
+    private BigInteger addMessage(GoogleAccountCredential credential, SharedPreferences sharedPreferences,String msgID,ArrayList<ContentProviderOperation> batch) throws IOException, MessagingException{
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+        MimeMessage mimeMessage;
+        Message message;
+
+        try {
+            message = gmail.users().messages().get(credential.getSelectedAccountName(), msgID).setFormat("raw").setFields("historyId,id,internalDate,labelIds,raw,snippet").execute();
+        } catch (GoogleJsonResponseException e) {
+            Log.d(TAG,"Message no longer exists: "+msgID);
+            return null;
+        }
+        if (message == null) return null;
+
+        for (String labelID : message.getLabelIds()){
+            if (labelID.equals("CHAT")) return null;
+        }
+
+        String address = "Unknown";
+        mimeMessage = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
+
+        if (mimeMessage.getFrom()[0] != null){
+            InternetAddress add;
+            add = new InternetAddress(mimeMessage.getFrom()[0].toString());
+
+            if (add.getPersonal() != null){
+                address = add.getPersonal();
+            } else if (add.getAddress() != null){
+                address = add.getAddress();
+            } else {
+                address = mimeMessage.getFrom()[0].toString();
+            }
+
+        }
+
+        Date date = new Date(message.getInternalDate());
+        batch.add(ContentProviderOperation.newInsert(IrisContentProvider.MESSAGES_URI)
+                .withValue(IrisContentProvider.ID, message.getId())
+                .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
+                .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
+                .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
+                .withValue(IrisContentProvider.SNIPPET, message.getSnippet())
+                .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
+                .withValue(IrisContentProvider.FROM, address)
+                .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
+
+        return message.getHistoryId();
+
+    }
+
+    private boolean deleteMessage(ContentResolver contentResolver, String msgID, ArrayList<ContentProviderOperation> batch) {
+        batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.ID + "=?", new String[]{msgID}).build());
+        return true;
+    }
+
+
+
 }
