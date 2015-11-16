@@ -17,10 +17,14 @@ import android.support.v4.content.Loader;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.ActionMode;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.AbsListView;
 import android.widget.ListView;
 import android.widget.Toast;
 
@@ -115,7 +119,64 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 R.layout.list_email_item, null,
                 new String[] {IrisContentProvider.SUBJECT,IrisContentProvider.FROM,IrisContentProvider.DATE},
                 new int[] { R.id.subjectTextview, R.id.fromTextView, R.id.dateTextView }, 0);
+        mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
         mListView.setAdapter(mAdapter);
+        mListView.setEmptyView(findViewById(R.id.empty_list_item));
+        mListView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+
+
+            @Override
+            public void onItemCheckedStateChanged(android.view.ActionMode mode, int position,
+                                                  long id, boolean checked) {
+                final int checkedCount = mListView.getCheckedItemCount();
+                switch (checkedCount) {
+                    case 0:
+                        mode.setSubtitle(null);
+                        break;
+                    case 1:
+                        mode.setSubtitle("One item selected");
+                        break;
+                    default:
+                        mode.setSubtitle("" + checkedCount + " items selected");
+                        break;
+                }
+
+            }
+
+            @Override
+            public boolean onActionItemClicked(android.view.ActionMode mode, MenuItem item) {
+                // Respond to clicks on the actions in the CAB
+                switch (item.getItemId()) {
+                    case R.id.action_delete:
+                        mode.finish(); // Action picked, so close the CAB
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            @Override
+            public boolean onCreateActionMode(android.view.ActionMode mode, Menu menu) {
+                // Inflate the menu for the CAB
+                MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.context_menu, menu);
+                mode.setTitle("Select Messages");
+                return true;
+            }
+
+            @Override
+            public void onDestroyActionMode(android.view.ActionMode mode) {
+                // Here you can make any necessary updates to the activity when
+                // the CAB is removed. By default, selected items are deselected/unchecked.
+            }
+
+            @Override
+            public boolean onPrepareActionMode(android.view.ActionMode mode, Menu menu) {
+                // Here you can perform updates to the CAB due to
+                // an invalidate() request
+                return true;
+            }
+        });
 
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
