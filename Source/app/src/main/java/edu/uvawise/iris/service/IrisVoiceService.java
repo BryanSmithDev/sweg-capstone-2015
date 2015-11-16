@@ -68,7 +68,7 @@ public class IrisVoiceService extends Service {
 
         mBuilder.setSmallIcon(R.drawable.ic_stat_iris);
         mBuilder.setContentTitle("Iris Service is Running");
-        mBuilder.setContentText("Your emails will be read out as they come in.");
+        mBuilder.setContentText("Emails will be read out as they come in.");
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         Notification notif = mBuilder.build();
