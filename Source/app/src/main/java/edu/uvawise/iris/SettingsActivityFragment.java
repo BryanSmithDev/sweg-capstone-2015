@@ -8,9 +8,6 @@ import android.preference.MultiSelectListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
-import android.preference.PreferenceManager;
-
-import java.util.prefs.Preferences;
 
 /**
  * A placeholder fragment containing a simple view.

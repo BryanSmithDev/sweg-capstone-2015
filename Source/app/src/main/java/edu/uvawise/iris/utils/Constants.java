@@ -1,4 +1,4 @@
-package edu.uvawise.iris;
+package edu.uvawise.iris.utils;
 
 /**
  * Frequently used Global constants are held here.

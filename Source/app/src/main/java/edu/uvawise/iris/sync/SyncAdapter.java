@@ -19,16 +19,13 @@ package edu.uvawise.iris.sync;
 import android.accounts.Account;
 import android.annotation.TargetApi;
 import android.content.AbstractThreadedSyncAdapter;
-import android.content.ContentProvider;
 import android.content.ContentProviderClient;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
-import android.content.ContentUris;
 import android.content.Context;
 import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.SyncResult;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.RemoteException;
@@ -67,7 +64,7 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
-import edu.uvawise.iris.Constants;
+import edu.uvawise.iris.utils.Constants;
 
 
 /**

@@ -13,4 +13,5 @@
     <string name="pref_sync_freq_summary">How often do you want to sync data?</string>
     <string name="action_delete">Delete</string>
     <string name="empty_mailbox">Your mailbox is empty.</string>
+    <string name="action_service">Start/Stop Iris Service</string>
 </resources>

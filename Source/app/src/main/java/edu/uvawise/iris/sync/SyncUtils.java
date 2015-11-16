@@ -40,8 +40,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import edu.uvawise.iris.Constants;
 import edu.uvawise.iris.R;
+import edu.uvawise.iris.utils.Constants;
 
 
 /**
