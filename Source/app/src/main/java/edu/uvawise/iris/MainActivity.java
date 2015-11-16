@@ -1,17 +1,23 @@
 package edu.uvawise.iris;
 
+import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.ListPreference;
+import android.preference.Preference;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SimpleCursorAdapter;
@@ -99,7 +105,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
             public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-
                 if (key.equals(getString(R.string.pref_sync_freq_key))) {
                     Log.d(TAG, "Sync Frequency Changed");
                     if (SyncUtils.isSyncEnabled(getContext())) {
@@ -273,6 +278,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+    private boolean hasPermission(){
+        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_DENIED;
+        if (result) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_CONTACTS},
+                    0);
+        } else {
+            return true;
+        }
+        return false;
+    }
+
 
     /**
      * Attempt to get a set of data from the Gmail API to display. If the
@@ -280,11 +297,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * user can pick an account.
      */
     private void refreshResults() {
-        if (credential.getSelectedAccountName() == null) {
-            chooseAccount();
-        } else {
-            if (!isDeviceOnline()) {
-                Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
+        if (hasPermission()){
+
+            if (credential.getSelectedAccountName() == null) {
+                chooseAccount();
+            } else {
+                if (!isDeviceOnline()) {
+                    Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
+                }
             }
         }
     }
@@ -293,17 +313,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * Perform manual sync
      */
     private void forceSync(){
-        if (credential.getSelectedAccountName() == null) {
-            chooseAccount();
-        } else {
-            if (!isDeviceOnline()) {
-                Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
+        if (hasPermission()) {
+            if (credential.getSelectedAccountName() == null) {
+                chooseAccount();
             } else {
-                if (SyncUtils.isSyncEnabled(this)) {
-                    mSwipeRefreshLayout.setRefreshing(true);
-                    SyncUtils.syncNow(this);
+                if (!isDeviceOnline()) {
+                    Toast.makeText(getApplicationContext(), "No network connection available.", Toast.LENGTH_LONG).show();
                 } else {
-                    Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
+                    if (SyncUtils.isSyncEnabled(this)) {
+                        mSwipeRefreshLayout.setRefreshing(true);
+                        SyncUtils.syncNow(this);
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
+                    }
                 }
             }
         }
