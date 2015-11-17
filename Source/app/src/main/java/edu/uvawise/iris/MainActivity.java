@@ -49,7 +49,7 @@ import edu.uvawise.iris.utils.Constants;
 /**
  * MainActivity - The main activity for the application providing entry. Shows a list of emails.
  */
-public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, ServiceConnection {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
@@ -68,11 +68,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
     ListView mListView;
 
-    private ServiceConnection mConnection = this;
-    private Messenger mServiceMessenger = null;
-    boolean mIsBound;
-
-    private final Messenger mMessenger = new Messenger(new IncomingMessageHandler());
 
     /**
      * Create the main activity.
@@ -462,64 +457,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }
 
-    /**
-     * Send data to the service
-     * @param intvaluetosend The data to send
-     */
-    private void sendMessageToService(int intvaluetosend) {
-        if (mIsBound) {
-            if (mServiceMessenger != null) {
-                try {
-                    Message msg = Message.obtain(null, IrisVoiceService.MSG_SET_INT_VALUE, intvaluetosend, 0);
-                    msg.replyTo = mMessenger;
-                    mServiceMessenger.send(msg);
-                } catch (RemoteException e) {
-                }
-            }
-        }
-    }
-
-    /**
-     * Bind this Activity to TimerService
-     */
-    private void doBindService() {
-        bindService(new Intent(this, IrisVoiceService.class), mConnection, Context.BIND_AUTO_CREATE);
-        mIsBound = true;
-        Log.d(TAG, "Binding.");
-    }
-
-    /**
-     * Un-bind this Activity to TimerService
-     */
-    private void doUnbindService() {
-        if (mIsBound) {
-            // If we have received the service, and hence registered with it, then now is the time to unregister.
-            if (mServiceMessenger != null) {
-                try {
-                    Message msg = Message.obtain(null, IrisVoiceService.MSG_UNREGISTER_CLIENT);
-                    msg.replyTo = mMessenger;
-                    mServiceMessenger.send(msg);
-                } catch (RemoteException e) {
-                    // There is nothing special we need to do if the service has crashed.
-                }
-            }
-            // Detach our existing connection.
-            unbindService(mConnection);
-            mIsBound = false;
-            Log.d(TAG, "Unbinding.");
-        }
-    }
-
-    /**
-     * Check if the service is running. If the service is running
-     * when the activity starts, we want to automatically bind to it.
-     */
-    private void automaticBind() {
-        if (IrisVoiceService.isRunning()) {
-            doBindService();
-        }
-    }
-
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         // This is called when the last Cursor provided to onLoadFinished()
@@ -528,55 +465,4 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mAdapter.swapCursor(null);
     }
 
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        mServiceMessenger = new Messenger(service);
-        Log.d(TAG,"Service attached.");
-        try {
-            Message msg = Message.obtain(null, IrisVoiceService.MSG_REGISTER_CLIENT);
-            msg.replyTo = mMessenger;
-            mServiceMessenger.send(msg);
-        }
-        catch (RemoteException e) {
-            // In this case the service has crashed before we could even do anything with it
-        }
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-        // This is called when the connection with the service has been unexpectedly disconnected - process crashed.
-        mServiceMessenger = null;
-        Log.d(TAG, "Service disconnected.");
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        try {
-            doUnbindService();
-        } catch (Throwable t) {
-            Log.e(TAG, "Failed to unbind from the service", t);
-        }
-    }
-
-
-    /**
-     * Handle incoming messages from TimerService
-     */
-    private class IncomingMessageHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            // Log.d(LOGTAG,"IncomingHandler:handleMessage");
-            switch (msg.what) {
-                case IrisVoiceService.MSG_SET_INT_VALUE:
-
-                    break;
-                case IrisVoiceService.MSG_SET_STRING_VALUE:
-                    String str1 = msg.getData().getString("str1");
-                    break;
-                default:
-                    super.handleMessage(msg);
-            }
-        }
-    }
 }
