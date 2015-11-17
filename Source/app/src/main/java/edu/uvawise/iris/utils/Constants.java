@@ -22,4 +22,5 @@ public abstract class Constants {
     public static final int PREFS_SYNC_FREQ_DEFAULT = 3;
     public static final String PREFS_GMAIL_HISTORY_ID_DEFAULT = null;
 
+    public static final String INTENT_DATA_MESSAGES_ADDED = "IntentPassedData_MessagesAdded";
 }

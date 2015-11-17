@@ -1,6 +1,6 @@
 package edu.uvawise.iris.service;
 
-import android.app.IntentService;
+
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -13,14 +13,31 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 
+
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.Base64;
+import com.google.api.services.gmail.model.Message;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
 import edu.uvawise.iris.MainActivity;
 import edu.uvawise.iris.R;
+import edu.uvawise.iris.utils.Constants;
 
-import static java.lang.Thread.sleep;
+
 
 /**
  * Created by Bryan on 11/16/2015.
@@ -33,6 +50,14 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
 
     TextToSpeech textToSpeech;
     private int speechStatus = 0;
+
+    private List<Message> queuedMessages = new ArrayList<>();
+    private List<MimeMessage> queuedMimeMessages = new ArrayList<>();
+
+    private final JsonFactory JSON_FACTORY = new JacksonFactory();
+
+    Properties props = new Properties();
+    Session session = Session.getDefaultInstance(props, null);
 
 
     private static final String TAG = IrisVoiceService.class.getSimpleName();
@@ -53,6 +78,27 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
         Log.i(TAG, "Received start id " + startId + ": " + intent);
+
+        String[] jsonMessages = intent.getStringArrayExtra(Constants.INTENT_DATA_MESSAGES_ADDED);
+        if (jsonMessages != null) {
+            Log.d(TAG,"Got the data on the BG service.");
+            Message msg;
+            MimeMessage mimeMsg;
+            for(String json : jsonMessages ){
+                try {
+                    msg = JSON_FACTORY.fromString(json, Message.class);
+                    mimeMsg = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(msg.getRaw())));
+                    queuedMessages.add(msg);
+                    queuedMimeMessages.add(mimeMsg);
+                } catch(IOException | MessagingException e) {
+                    Log.e(TAG,"Error Parsing JSON.");
+                    e.printStackTrace();
+                }
+            }
+            Log.d(TAG,"Messages Added");
+        }
+
+
         return START_STICKY; // Run until explicitly stopped.
     }
 
@@ -110,7 +156,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             Log.d("TTS", "TTS SUCCESS");
             if (textToSpeech == null) {
                 textToSpeech = new TextToSpeech(getApplicationContext(), this);
-                textToSpeech.setSpeechRate(0.8f);
+                textToSpeech.setSpeechRate(1.1f);
             }
             int result = textToSpeech.setLanguage(Locale.US);
 
@@ -129,12 +175,35 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     private class MessageReaderTask extends TimerTask {
         @Override
         public void run() {
-            Log.i(TAG, "Timer doing work.");
             try {
+                if (!queuedMessages.isEmpty()){
+                    Message msg;
+                    MimeMessage mimeMsg;
+                    String address = "";
+                    for (int i=0;i<queuedMessages.size();i++) {
+                        msg=queuedMessages.get(i);
+                        mimeMsg=queuedMimeMessages.get(i);
+                        if (mimeMsg.getFrom()[0] != null){
+                            InternetAddress add;
+                            add = new InternetAddress(mimeMsg.getFrom()[0].toString());
 
+                            if (add.getPersonal() != null){
+                                address = add.getPersonal();
+                            } else if (add.getAddress() != null){
+                                address = add.getAddress();
+                            } else {
+                                address = mimeMsg.getFrom()[0].toString();
+                            }
 
-            } catch (Throwable t) { //you should always ultimately catch all exceptions in timer tasks.
-                Log.e("TimerTick", "Timer Tick Failed.", t);
+                        }
+                        textToSpeech.speak("New email from "+address, TextToSpeech.QUEUE_FLUSH, null);
+                        textToSpeech.speak("Subject: "+mimeMsg.getSubject(), TextToSpeech.QUEUE_ADD, null);
+                        textToSpeech.speak("Body: "+msg.getSnippet(), TextToSpeech.QUEUE_ADD, null);
+                    }
+                    queuedMessages.clear();
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error when checking for incoming email.", t);
             }
         }
     }

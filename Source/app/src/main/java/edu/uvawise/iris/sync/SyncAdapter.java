@@ -23,6 +23,7 @@ import android.content.ContentProviderClient;
 import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.SyncResult;
@@ -37,6 +38,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccoun
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpResponseException;
+import com.google.api.client.json.JsonGenerator;
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.History;
@@ -64,6 +66,7 @@ import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
+import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.utils.Constants;
 
 
@@ -83,7 +86,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private Context context;    //Store the current context
     private Gmail gmail;        //The Gmail API service
 
-
+    private List<String> newMessages = new ArrayList<>();
 
     /**
      * Constructor. Obtains handle to content resolver for later use.
@@ -333,13 +336,21 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     }
                 }
 
-
                 for (Message msgID : addedMessages) {
                     addMessage(credential, sharedPreferences, msgID.getId(), batch);
                 }
 
                 for (Message msgID : deletedMessages) {
                     deleteMessage(contentResolver, msgID.getId(), batch);
+                }
+
+                if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
+                    Log.d(TAG,"Putting new messages in the intent.");
+                    Intent serviceIntent = new Intent(context, IrisVoiceService.class);
+                    String[] stockArr = new String[newMessages.size()];
+                    stockArr = newMessages.toArray(stockArr);
+                    serviceIntent.putExtra(Constants.INTENT_DATA_MESSAGES_ADDED,stockArr);
+                    context.startService(serviceIntent);
                 }
             }
         }
@@ -359,6 +370,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
 
     }
+
 
     private BigInteger addMessage(GoogleAccountCredential credential, SharedPreferences sharedPreferences,String msgID,ArrayList<ContentProviderOperation> batch) throws IOException, MessagingException{
         Properties props = new Properties();
@@ -405,6 +417,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 .withValue(IrisContentProvider.SUBJECT, mimeMessage.getSubject())
                 .withValue(IrisContentProvider.FROM, address)
                 .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
+
+        newMessages.add(message.getFactory().toPrettyString(message));
 
         return message.getHistoryId();
 
