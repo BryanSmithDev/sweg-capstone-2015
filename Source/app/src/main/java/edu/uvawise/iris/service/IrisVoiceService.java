@@ -7,6 +7,9 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.database.ContentObserver;
+import android.net.Uri;
+import android.os.Handler;
 import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.Nullable;
@@ -35,6 +38,7 @@ import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.MainActivity;
 import edu.uvawise.iris.R;
+import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.utils.Constants;
 
 
@@ -63,6 +67,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     private static final String TAG = IrisVoiceService.class.getSimpleName();
 
 
+    private MessagesObserver messagesObserver = new MessagesObserver(new Handler());
 
     @Override
     public void onCreate() {
@@ -70,7 +75,12 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         Log.i(TAG, "Voice Service Created.");
         showNotification();
         isRunning = true;
-        mTimer.scheduleAtFixedRate(new MessageReaderTask(), 3000L, 3000L);
+       // mTimer.scheduleAtFixedRate(new MessageReaderTask(), 3000L, 3000L);
+        getContentResolver().
+                registerContentObserver(
+                        IrisContentProvider.MESSAGES_URI,
+                        true,
+                        messagesObserver);
         textToSpeech=new TextToSpeech(getApplicationContext(), this);
     }
 
@@ -136,6 +146,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         mNotificationManager.cancelAll(); // Cancel the persistent notification.
         if (mTimer != null) {mTimer.cancel();}
         isRunning = false;
+        getContentResolver().unregisterContentObserver(messagesObserver);
         if (textToSpeech != null) {
             textToSpeech.stop();
             textToSpeech.shutdown();
@@ -168,13 +179,58 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 startActivity(installIntent);
             }
             Log.d("TTS", "Language set");
-            textToSpeech.speak("Test", TextToSpeech.QUEUE_FLUSH, null);
         }
     }
 
     private class MessageReaderTask extends TimerTask {
         @Override
         public void run() {
+            try {
+                if (!queuedMessages.isEmpty()){
+                    Message msg;
+                    MimeMessage mimeMsg;
+                    String address = "";
+                    for (int i=0;i<queuedMessages.size();i++) {
+                        msg=queuedMessages.get(i);
+                        mimeMsg=queuedMimeMessages.get(i);
+                        if (mimeMsg.getFrom()[0] != null){
+                            InternetAddress add;
+                            add = new InternetAddress(mimeMsg.getFrom()[0].toString());
+
+                            if (add.getPersonal() != null){
+                                address = add.getPersonal();
+                            } else if (add.getAddress() != null){
+                                address = add.getAddress();
+                            } else {
+                                address = mimeMsg.getFrom()[0].toString();
+                            }
+
+                        }
+                        textToSpeech.speak("New email from "+address, TextToSpeech.QUEUE_FLUSH, null);
+                        textToSpeech.speak("Subject: "+mimeMsg.getSubject(), TextToSpeech.QUEUE_ADD, null);
+                        textToSpeech.speak("Body: "+msg.getSnippet(), TextToSpeech.QUEUE_ADD, null);
+                    }
+                    queuedMessages.clear();
+                }
+            } catch (Throwable t) {
+                Log.e(TAG, "Error when checking for incoming email.", t);
+            }
+        }
+    }
+
+
+    class MessagesObserver extends ContentObserver {
+        public MessagesObserver(Handler handler) {
+            super(handler);
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            this.onChange(selfChange, null);
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
             try {
                 if (!queuedMessages.isEmpty()){
                     Message msg;

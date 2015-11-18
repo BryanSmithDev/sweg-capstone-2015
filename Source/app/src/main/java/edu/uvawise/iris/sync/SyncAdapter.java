@@ -351,6 +351,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     stockArr = newMessages.toArray(stockArr);
                     serviceIntent.putExtra(Constants.INTENT_DATA_MESSAGES_ADDED,stockArr);
                     context.startService(serviceIntent);
+                    newMessages.clear();
                 }
             }
         }
