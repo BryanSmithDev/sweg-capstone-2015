@@ -273,5 +273,13 @@ public class SyncUtils {
                AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), credential).setApplicationName("Iris").build();
     }
 
+    public static String getGmailAccountName(Context context){
+        String account = null;
+        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        account = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "");
+        if (account.equals("")) Log.d(TAG, "Saved account name is null");
+        return account;
+    }
+
 
 }

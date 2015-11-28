@@ -3,10 +3,12 @@ package edu.uvawise.iris;
 import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Dialog;
-import android.content.ComponentName;
+import android.content.ContentProviderOperation;
+import android.content.ContentProviderResult;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
+import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -14,10 +16,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
-import android.os.Messenger;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
@@ -37,9 +35,17 @@ import android.widget.AbsListView;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.ModifyMessageRequest;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.sync.IrisContentProvider;
@@ -154,16 +160,124 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             }
 
+            String makePlaceholders(int len) {
+                if (len < 1) {
+                    // It will lead to an invalid query anyway ..
+                    throw new RuntimeException("No placeholders");
+                } else {
+                    StringBuilder sb = new StringBuilder(len * 2 - 1);
+                    sb.append("?");
+                    for (int i = 1; i < len; i++) {
+                        sb.append(",?");
+                    }
+                    return sb.toString();
+                }
+            }
+
             @Override
             public boolean onActionItemClicked(android.view.ActionMode mode, MenuItem item) {
                 // Respond to clicks on the actions in the CAB
                 switch (item.getItemId()) {
+
                     case R.id.action_delete:
-                        mode.finish(); // Action picked, so close the CAB
+                        new Thread(new Runnable() { public void run() {
+                            Log.d(TAG,"Thread Running");
+                                    GoogleAccountCredential credential = null;
+                                    try {
+                                        credential = SyncUtils.getGmailAccountCredential(getContext(), SyncUtils.getGmailAccountName(getContext()));
+
+                                        final Gmail gmail = SyncUtils.getGmailService(credential);
+                                        for(String id : gatherSelections()) {
+                                                Log.d(TAG,"Deleting from server: "+id);
+                                                gmail.users().messages().trash(SyncUtils.getGmailAccountName(getContext()), id).execute();
+                                        }
+                                    } catch (IOException | GoogleAuthException e) {
+                                        runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Toast.makeText(getContext(),"Error deleting message(s).",Toast.LENGTH_SHORT).show();
+                                            }
+                                        });
+                                        e.printStackTrace();
+                                    }
+
+                        } }).start();
+                        return true;
+                    case R.id.action_archive:
+                        new Thread(new Runnable() { public void run() {
+                            Log.d(TAG,"Thread Running");
+                            GoogleAccountCredential credential = null;
+                            try {
+                                credential = SyncUtils.getGmailAccountCredential(getContext(), SyncUtils.getGmailAccountName(getContext()));
+
+                                final Gmail gmail = SyncUtils.getGmailService(credential);
+                                for(String id : gatherSelections()) {
+                                    Log.d(TAG,"Archiving "+id);
+                                    ModifyMessageRequest request = new ModifyMessageRequest();
+                                    request.setRemoveLabelIds(Collections.singletonList("INBOX"));
+                                    gmail.users().messages().modify(SyncUtils.getGmailAccountName(getContext()),id,request).execute();
+                                }
+                            } catch (IOException | GoogleAuthException e) {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Toast.makeText(getContext(),"Error archiving message(s).",Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                                e.printStackTrace();
+                            }
+
+                        } }).start();
                         return true;
                     default:
                         return false;
                 }
+            }
+
+            public ArrayList<String> gatherSelections(){
+                final ContentResolver contentResolver = getContext().getContentResolver();
+                ArrayList<ContentProviderOperation> batch = new ArrayList<>();
+                final ArrayList<String> messageIDs = new ArrayList<>();
+                String[] checkedIDStrings = new String[mListView.getCheckedItemIds().length];
+                for(int i=0; i < mListView.getCheckedItemIds().length;i++){
+                    Log.d(TAG,"Delete MESSAGE_ID: "+mListView.getCheckedItemIds()[i]);
+                    batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.ID +" = ?",new String[]{mListView.getCheckedItemIds()[i]+""}).build());
+                    checkedIDStrings[i] = ""+mListView.getCheckedItemIds()[i];
+                    Log.d(TAG, "ID String: " + checkedIDStrings[i]);
+                }
+                try {
+
+                    Cursor cur = contentResolver.query(
+                            IrisContentProvider.MESSAGES_URI,
+                            new String[]{IrisContentProvider.ID, IrisContentProvider.MESSAGE_ID},
+                            IrisContentProvider.ID + " IN(" + makePlaceholders(checkedIDStrings.length) + ")",
+                            checkedIDStrings,
+                            null);
+
+                    if (cur != null) {
+
+                        while (cur.moveToNext()) {
+                            Log.d(TAG, "Query: " + cur.getString(1));
+                            messageIDs.add(cur.getString(1));
+                        }
+
+                        cur.close();
+                    } else {
+                        Log.d(TAG, "Null cursor");
+                    }
+
+                    ContentProviderResult[] result = contentResolver.applyBatch(Constants.SYNC_AUTH,batch);
+                    Log.d(TAG,"Deleted: "+result.length);
+                    contentResolver.notifyChange(
+                            IrisContentProvider.MESSAGES_URI, // URI where data was modified
+                            null,                           // No local observer
+                            false);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                } catch (OperationApplicationException e) {
+                    e.printStackTrace();
+                }
+                return messageIDs;
             }
 
             @Override
@@ -420,7 +534,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
         // This is called when a new Loader needs to be created.  This
-        // sample only has one Loader, so we don't care about the ID.
+        // sample only has one Loader, so we don't care about the MESSAGE_ID.
         // First, pick the base URI to use depending on whether we are
         // currently filtering.
         Uri baseUri;
