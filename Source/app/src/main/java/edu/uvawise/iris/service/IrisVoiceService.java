@@ -53,7 +53,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     private static boolean isRunning = false;
 
     TextToSpeech textToSpeech;
-    private int speechStatus = 0;
+
 
     private List<Message> queuedMessages = new ArrayList<>();
     private List<MimeMessage> queuedMimeMessages = new ArrayList<>();
@@ -75,7 +75,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         Log.i(TAG, "Voice Service Created.");
         showNotification();
         isRunning = true;
-       // mTimer.scheduleAtFixedRate(new MessageReaderTask(), 3000L, 3000L);
         getContentResolver().
                 registerContentObserver(
                         IrisContentProvider.MESSAGES_URI,
@@ -89,7 +88,9 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         super.onStartCommand(intent, flags, startId);
         Log.i(TAG, "Received start id " + startId + ": " + intent);
 
-        String[] jsonMessages = intent.getStringArrayExtra(Constants.INTENT_DATA_MESSAGES_ADDED);
+        String[] jsonMessages = null;
+        jsonMessages = intent.getStringArrayExtra(Constants.INTENT_DATA_MESSAGES_ADDED);
+
         if (jsonMessages != null) {
             Log.d(TAG,"Got the data on the BG service.");
             Message msg;
@@ -162,7 +163,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
 
     @Override
     public void onInit(int status) {
-        speechStatus = status;
         if (status == TextToSpeech.SUCCESS) {
             Log.d("TTS", "TTS SUCCESS");
             if (textToSpeech == null) {
@@ -179,42 +179,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 startActivity(installIntent);
             }
             Log.d("TTS", "Language set");
-        }
-    }
-
-    private class MessageReaderTask extends TimerTask {
-        @Override
-        public void run() {
-            try {
-                if (!queuedMessages.isEmpty()){
-                    Message msg;
-                    MimeMessage mimeMsg;
-                    String address = "";
-                    for (int i=0;i<queuedMessages.size();i++) {
-                        msg=queuedMessages.get(i);
-                        mimeMsg=queuedMimeMessages.get(i);
-                        if (mimeMsg.getFrom()[0] != null){
-                            InternetAddress add;
-                            add = new InternetAddress(mimeMsg.getFrom()[0].toString());
-
-                            if (add.getPersonal() != null){
-                                address = add.getPersonal();
-                            } else if (add.getAddress() != null){
-                                address = add.getAddress();
-                            } else {
-                                address = mimeMsg.getFrom()[0].toString();
-                            }
-
-                        }
-                        textToSpeech.speak("New email from "+address, TextToSpeech.QUEUE_FLUSH, null);
-                        textToSpeech.speak("Subject: "+mimeMsg.getSubject(), TextToSpeech.QUEUE_ADD, null);
-                        textToSpeech.speak("Body: "+msg.getSnippet(), TextToSpeech.QUEUE_ADD, null);
-                    }
-                    queuedMessages.clear();
-                }
-            } catch (Throwable t) {
-                Log.e(TAG, "Error when checking for incoming email.", t);
-            }
         }
     }
 
@@ -236,6 +200,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                     Message msg;
                     MimeMessage mimeMsg;
                     String address = "";
+                    textToSpeech.stop();
                     for (int i=0;i<queuedMessages.size();i++) {
                         msg=queuedMessages.get(i);
                         mimeMsg=queuedMimeMessages.get(i);
@@ -252,7 +217,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                             }
 
                         }
-                        textToSpeech.speak("New email from "+address, TextToSpeech.QUEUE_FLUSH, null);
+                        textToSpeech.speak("New email from: "+address, TextToSpeech.QUEUE_ADD, null);
                         textToSpeech.speak("Subject: "+mimeMsg.getSubject(), TextToSpeech.QUEUE_ADD, null);
                         textToSpeech.speak("Body: "+msg.getSnippet(), TextToSpeech.QUEUE_ADD, null);
                     }
