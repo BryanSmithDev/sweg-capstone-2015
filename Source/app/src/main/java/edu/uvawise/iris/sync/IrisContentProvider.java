@@ -29,6 +29,7 @@ public class IrisContentProvider extends ContentProvider {
 
     //Column Names
     public static final String ID = "_id";
+    public static final String MESSAGE_ID = "msg_id";
     public static final String SNIPPET = "snippet";
     public static final String HISTORYID = "historyId";
     public static final String INTERNALDATE = "internalDate";
@@ -40,6 +41,7 @@ public class IrisContentProvider extends ContentProvider {
 
     static final String[] MESSAGE_PROJECTION = new String[] {
             ID,
+            MESSAGE_ID,
             SNIPPET,
             HISTORYID,
             INTERNALDATE,
@@ -52,20 +54,22 @@ public class IrisContentProvider extends ContentProvider {
 
     //URI Column numbers
     static final int MESSAGES = 1;
-    static final int MSG_ID = 2;
-    static final int MSG_SNIPPET = 3;
-    static final int MSG_HISTORYID = 4;
-    static final int MSG_INTERNALDATE = 5;
-    static final int MSG_DATE = 6;
-    static final int MSG_SUBJECT = 7;
-    static final int MSG_FROM = 8;
-    static final int MSG_BODY = 9;
-    static final int MSG_ISREAD = 10;
+    static final int _ID = 2;
+    static final int MSG_ID = 3;
+    static final int MSG_SNIPPET = 4;
+    static final int MSG_HISTORYID = 5;
+    static final int MSG_INTERNALDATE = 6;
+    static final int MSG_DATE = 7;
+    static final int MSG_SUBJECT = 8;
+    static final int MSG_FROM = 9;
+    static final int MSG_BODY = 10;
+    static final int MSG_ISREAD = 11;
 
     static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
     static final String URL = "content://" + PROVIDER_NAME + "/messages";
     public static final Uri MESSAGES_URI = Uri.parse(URL);
-    public static final Uri MESSAGE_ID_URI = Uri.parse(URL+"/"+ID+"/"+MSG_ID);
+    public static final Uri ID_URI = Uri.parse(URL+"/"+ ID +"/"+_ID);
+    public static final Uri MESSAGE_ID_URI = Uri.parse(URL+"/"+ MESSAGE_ID +"/"+MSG_ID);
     public static final Uri MESSAGE_SNIPPET_URI = Uri.parse(URL+"/"+SNIPPET+"/"+MSG_SNIPPET);
     public static final Uri MESSAGE_HISTORYID_URI = Uri.parse(URL+"/"+HISTORYID+"/"+MSG_HISTORYID);
     public static final Uri MESSAGE_INTERNALDATE_URI = Uri.parse(URL+"/"+INTERNALDATE+"/"+MSG_INTERNALDATE);
@@ -80,7 +84,8 @@ public class IrisContentProvider extends ContentProvider {
     static{
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(PROVIDER_NAME, "messages", MESSAGES);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ID+"/#", MSG_ID);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ ID +"/#", _ID);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ MESSAGE_ID +"/#", MSG_ID);
         uriMatcher.addURI(PROVIDER_NAME, "messages/"+SNIPPET+"/#", MSG_SNIPPET);
         uriMatcher.addURI(PROVIDER_NAME, "messages/"+HISTORYID+"/#", MSG_HISTORYID);
         uriMatcher.addURI(PROVIDER_NAME, "messages/"+INTERNALDATE+"/#", MSG_INTERNALDATE);
@@ -97,10 +102,11 @@ public class IrisContentProvider extends ContentProvider {
     private SQLiteDatabase db;
     static final String DATABASE_NAME = "Gmail";
     static final String TABLE_NAME = "gmailMessages";
-    static final int DATABASE_VERSION = 7;
+    static final int DATABASE_VERSION = 9;
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + TABLE_NAME + "("+
-            " "+ID+"           VARCHAR(32) NOT NULL PRIMARY KEY,"+
+            " "+ ID +"           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"+
+            " "+MESSAGE_ID+"           VARCHAR(32) NOT NULL,"+
             " "+SNIPPET+"      VARCHAR(128),"+
             " "+HISTORYID+"    VARCHAR(32)  NOT NULL,"+
             " "+INTERNALDATE+" VARCHAR(32)  NOT NULL,"+
@@ -180,8 +186,12 @@ public class IrisContentProvider extends ContentProvider {
                 qb.setProjectionMap(MESSAGES_PROJECTION_MAP);
                 break;
 
-            case MSG_ID:
+            case _ID:
                 qb.appendWhere(ID + "=" + uri.getPathSegments().get(1));
+                break;
+
+            case MSG_ID:
+                qb.appendWhere(MESSAGE_ID + "=" + uri.getPathSegments().get(1));
                 break;
 
             case MSG_HISTORYID:
@@ -227,9 +237,15 @@ public class IrisContentProvider extends ContentProvider {
                 count = db.delete(TABLE_NAME, selection, selectionArgs);
                 break;
 
-            case MSG_ID:
+            case _ID:
                 String id = uri.getPathSegments().get(1);
                 count = db.delete( TABLE_NAME, ID +  " = " + id +
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
+                break;
+
+            case MSG_ID:
+                String id2 = uri.getPathSegments().get(1);
+                count = db.delete( TABLE_NAME, MESSAGE_ID +  " = " + id2 +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
@@ -274,8 +290,13 @@ public class IrisContentProvider extends ContentProvider {
                 count = db.update(TABLE_NAME, values, selection, selectionArgs);
                 break;
 
-            case MSG_ID:
+            case _ID:
                 count = db.update(TABLE_NAME, values, ID + " = " + uri.getPathSegments().get(1) +
+                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                break;
+
+            case MSG_ID:
+                count = db.update(TABLE_NAME, values, MESSAGE_ID + " = " + uri.getPathSegments().get(1) +
                         (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
                 break;
 
@@ -318,6 +339,7 @@ public class IrisContentProvider extends ContentProvider {
             /**
              * Get a particular message
              */
+            case _ID:
             case MSG_ID:
             case MSG_HISTORYID:
             case MSG_INTERNALDATE:

@@ -38,7 +38,6 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccoun
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.HttpResponseException;
-import com.google.api.client.json.JsonGenerator;
 import com.google.api.client.util.Base64;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.History;
@@ -341,7 +340,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 }
 
                 for (Message msgID : deletedMessages) {
-                    deleteMessage(contentResolver, msgID.getId(), batch);
+                    deleteMessage(msgID.getId(), batch);
                 }
 
                 if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
@@ -410,7 +409,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
 
         Date date = new Date(message.getInternalDate());
         batch.add(ContentProviderOperation.newInsert(IrisContentProvider.MESSAGES_URI)
-                .withValue(IrisContentProvider.ID, message.getId())
+                .withValue(IrisContentProvider.MESSAGE_ID, message.getId())
                 .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
                 .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
                 .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
@@ -425,8 +424,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
 
     }
 
-    private boolean deleteMessage(ContentResolver contentResolver, String msgID, ArrayList<ContentProviderOperation> batch) {
-        batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.ID + "=?", new String[]{msgID}).build());
+    private boolean deleteMessage(String msgID, ArrayList<ContentProviderOperation> batch) {
+        batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.MESSAGE_ID + "=?", new String[]{msgID}).build());
         return true;
     }
 
