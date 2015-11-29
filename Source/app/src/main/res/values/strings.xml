@@ -15,4 +15,6 @@
     <string name="empty_mailbox">Your mailbox is empty.</string>
     <string name="action_service">Start/Stop Iris Service</string>
     <string name="action_archive">Archive</string>
+    <string name="button_keep">Keep</string>
+    <string name="button_delete">Delete</string>
 </resources>

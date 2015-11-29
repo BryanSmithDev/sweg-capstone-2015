@@ -15,6 +15,13 @@ import android.speech.tts.TextToSpeech;
 import android.support.annotation.Nullable;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 
 import com.google.api.client.json.JsonFactory;
@@ -29,7 +36,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.mail.MessagingException;
 import javax.mail.Session;
@@ -47,6 +53,7 @@ import edu.uvawise.iris.utils.Constants;
  * Created by Bryan on 11/16/2015.
  */
 public class IrisVoiceService extends Service implements TextToSpeech.OnInitListener {
+    private WindowManager windowManager;
     private NotificationManager mNotificationManager;
     private Timer mTimer = new Timer();
 
@@ -63,9 +70,15 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     Properties props = new Properties();
     Session session = Session.getDefaultInstance(props, null);
 
+    private LinearLayout root;
+    private TextView fromView;
+    private TextView subjectView;
+    private TextView bodyView;
+
 
     private static final String TAG = IrisVoiceService.class.getSimpleName();
 
+    private String currentMessageID = "";
 
     private MessagesObserver messagesObserver = new MessagesObserver(new Handler());
 
@@ -80,7 +93,98 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                         IrisContentProvider.MESSAGES_URI,
                         true,
                         messagesObserver);
-        textToSpeech=new TextToSpeech(getApplicationContext(), this);
+        textToSpeech=new TextToSpeech(this, this);
+        windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+
+        LayoutInflater inflater =
+                (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+
+        root = new LinearLayout(this);
+        root.setClickable(false);
+        root.setFocusableInTouchMode(false);
+        root.setFocusable(false);
+        root.setVisibility(View.GONE);
+
+        View messageView = inflater.inflate(R.layout.window_message_display, root, true);
+        messageView.setFocusableInTouchMode(false);
+        messageView.setFocusable(false);
+        messageView.setClickable(false);
+        messageView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Log.d(TAG,"MessageViewTouch");
+                v.setVisibility(View.GONE);
+                return false;
+            }
+        });
+
+        fromView = (TextView) messageView.findViewById(R.id.fromTextView);
+        subjectView = (TextView) messageView.findViewById(R.id.subjectTextView);
+        bodyView = (TextView) messageView.findViewById(R.id.bodyTextView);
+        Button keepButton = (Button) messageView.findViewById(R.id.keepButton);
+        Button deleteButton = (Button) messageView.findViewById(R.id.deleteButton);
+
+        keepButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                queuedMessages.remove(0);
+                readCurrentMessage();
+                //TODO: Mark message as read
+            }
+        });
+
+        deleteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                queuedMessages.remove(0);
+                readCurrentMessage();
+                //TODO: Delete Message
+            }
+        });
+
+
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+
+        windowManager.addView(root, params);
+
+    }
+
+    private void readCurrentMessage() {
+        if (queuedMessages.size() >= 1 && queuedMessages.size() >= 1) {
+            String addS = "";
+            try {
+                if (queuedMimeMessages.get(0).getFrom()[0] != null) {
+                    InternetAddress add;
+                    add = new InternetAddress(queuedMimeMessages.get(0).getFrom()[0].toString());
+
+                    if (add.getPersonal() != null) {
+                        addS = add.getPersonal();
+                    } else if (add.getAddress() != null) {
+                        addS = add.getAddress();
+                    } else {
+                        addS = queuedMimeMessages.get(0).getFrom()[0].toString();
+                    }
+                }
+
+                fromView.setText(addS);
+                subjectView.setText(queuedMimeMessages.get(0).getSubject());
+                bodyView.setText(queuedMessages.get(0).getSnippet());
+                currentMessageID = queuedMessages.get(0).getId();
+                textToSpeech.speak("New email from: " + addS, TextToSpeech.QUEUE_ADD, null);
+                textToSpeech.speak("Subject: " + queuedMimeMessages.get(0).getSubject(), TextToSpeech.QUEUE_ADD, null);
+                textToSpeech.speak("Body: " + queuedMessages.get(0).getSnippet(), TextToSpeech.QUEUE_ADD, null);
+            } catch (MessagingException e) {
+                e.printStackTrace();
+            }
+        } else {
+            root.setVisibility(View.GONE);
+        }
     }
 
     @Override
@@ -88,28 +192,30 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         super.onStartCommand(intent, flags, startId);
         Log.i(TAG, "Received start id " + startId + ": " + intent);
 
-        String[] jsonMessages = null;
-        jsonMessages = intent.getStringArrayExtra(Constants.INTENT_DATA_MESSAGES_ADDED);
+        if (intent != null) {
 
-        if (jsonMessages != null) {
-            Log.d(TAG,"Got the data on the BG service.");
-            Message msg;
-            MimeMessage mimeMsg;
-            for(String json : jsonMessages ){
-                try {
-                    msg = JSON_FACTORY.fromString(json, Message.class);
-                    mimeMsg = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(msg.getRaw())));
-                    queuedMessages.add(msg);
-                    queuedMimeMessages.add(mimeMsg);
-                } catch(IOException | MessagingException e) {
-                    Log.e(TAG,"Error Parsing JSON.");
-                    e.printStackTrace();
+
+            String[] jsonMessages = null;
+            jsonMessages = intent.getStringArrayExtra(Constants.INTENT_DATA_MESSAGES_ADDED);
+
+            if (jsonMessages != null) {
+                Log.d(TAG, "Got the data on the BG service.");
+                Message msg;
+                MimeMessage mimeMsg;
+                for (String json : jsonMessages) {
+                    try {
+                        msg = JSON_FACTORY.fromString(json, Message.class);
+                        mimeMsg = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(msg.getRaw())));
+                        queuedMessages.add(msg);
+                        queuedMimeMessages.add(mimeMsg);
+                    } catch (IOException | MessagingException e) {
+                        Log.e(TAG, "Error Parsing JSON.");
+                        e.printStackTrace();
+                    }
                 }
+                Log.d(TAG, "Messages Added");
             }
-            Log.d(TAG,"Messages Added");
         }
-
-
         return START_STICKY; // Run until explicitly stopped.
     }
 
@@ -144,6 +250,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     @Override
     public void onDestroy() {
         super.onDestroy();
+        if (root != null) windowManager.removeView(root);
         mNotificationManager.cancelAll(); // Cancel the persistent notification.
         if (mTimer != null) {mTimer.cancel();}
         isRunning = false;
@@ -188,6 +295,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             super(handler);
         }
 
+
         @Override
         public void onChange(boolean selfChange) {
             this.onChange(selfChange, null);
@@ -197,31 +305,30 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         public void onChange(boolean selfChange, Uri uri) {
             try {
                 if (!queuedMessages.isEmpty()){
-                    Message msg;
-                    MimeMessage mimeMsg;
-                    String address = "";
-                    textToSpeech.stop();
-                    for (int i=0;i<queuedMessages.size();i++) {
-                        msg=queuedMessages.get(i);
-                        mimeMsg=queuedMimeMessages.get(i);
-                        if (mimeMsg.getFrom()[0] != null){
-                            InternetAddress add;
-                            add = new InternetAddress(mimeMsg.getFrom()[0].toString());
+                        Message msg;
+                        MimeMessage mimeMsg;
+                        String address = "";
+                        for (int i = 0; i < queuedMessages.size(); i++) {
+                            msg = queuedMessages.get(i);
+                            mimeMsg = queuedMimeMessages.get(i);
+                            if (mimeMsg.getFrom()[0] != null) {
+                                InternetAddress add;
+                                add = new InternetAddress(mimeMsg.getFrom()[0].toString());
 
-                            if (add.getPersonal() != null){
-                                address = add.getPersonal();
-                            } else if (add.getAddress() != null){
-                                address = add.getAddress();
-                            } else {
-                                address = mimeMsg.getFrom()[0].toString();
+                                if (add.getPersonal() != null) {
+                                    address = add.getPersonal();
+                                } else if (add.getAddress() != null) {
+                                    address = add.getAddress();
+                                } else {
+                                    address = mimeMsg.getFrom()[0].toString();
+                                }
+
                             }
-
                         }
-                        textToSpeech.speak("New email from: "+address, TextToSpeech.QUEUE_ADD, null);
-                        textToSpeech.speak("Subject: "+mimeMsg.getSubject(), TextToSpeech.QUEUE_ADD, null);
-                        textToSpeech.speak("Body: "+msg.getSnippet(), TextToSpeech.QUEUE_ADD, null);
+                    if (root.getVisibility() != View.VISIBLE) {
+                        readCurrentMessage();
+                        root.setVisibility(View.VISIBLE);
                     }
-                    queuedMessages.clear();
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "Error when checking for incoming email.", t);

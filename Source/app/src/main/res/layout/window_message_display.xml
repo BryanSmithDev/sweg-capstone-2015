@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayRoot"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:focusable="false"
+    android:focusableInTouchMode="false"
+    android:clickable="false"
+    android:background="@color/primary"
+    android:orientation="vertical"
+    android:weightSum="18"
+    android:paddingLeft="@dimen/activity_vertical_margin"
+    android:paddingEnd="@dimen/activity_vertical_margin"
+    android:paddingRight="@dimen/activity_vertical_margin"
+    android:paddingStart="@dimen/activity_vertical_margin"
+    android:paddingTop="@dimen/activity_horizontal_margin"
+    android:paddingBottom="@dimen/activity_horizontal_margin">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Medium Text"
+        android:id="@+id/subjectTextView"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:layout_weight="1"
+        style="@style/autoscroll"/>
+
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:text="Small Text"
+        android:id="@+id/fromTextView"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:layout_weight="1"
+        android:layout_marginTop="-15dp"
+        style="@style/autoscroll"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="Medium Text"
+        android:id="@+id/bodyTextView"
+        android:focusable="false"
+        android:focusableInTouchMode="false"
+        android:layout_weight="4"
+        style="@style/autoscroll"/>
+
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_keep"
+        android:id="@+id/keepButton"
+        android:background="#40c115"
+        android:layout_weight="6"
+        android:layout_marginBottom="4dp"/>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/button_delete"
+        android:id="@+id/deleteButton"
+        android:layout_marginTop="4dp"
+        android:background="#da1913"
+        android:layout_weight="6"/>
+</LinearLayout>
