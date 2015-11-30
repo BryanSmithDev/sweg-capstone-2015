@@ -80,7 +80,6 @@ public class SyncUtils {
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putBoolean(Constants.PREFS_KEY_GMAIL_SYNCING, false);
         editor.apply();
-
         disableSyncForAll(context);
 
     }

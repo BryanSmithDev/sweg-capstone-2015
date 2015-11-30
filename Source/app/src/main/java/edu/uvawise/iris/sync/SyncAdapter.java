@@ -221,16 +221,6 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    private BigInteger getHistoryID() {
-        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
-        String histString = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, Constants.PREFS_GMAIL_HISTORY_ID_DEFAULT);
-        BigInteger histID = null;
-        if (histString != null) {
-            histID = new BigInteger(histString);
-        }
-        return histID;
-    }
-
 
     private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID) throws IOException {
         return getHistoryResponse(credential, histID, null);
@@ -262,14 +252,11 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     }
 
     private boolean canPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws IOException {
-        BigInteger histID = getHistoryID();
+        BigInteger histID = GmailUtils.getHistoryID(context);
         if (histID == null) return false;
         try {
             ListHistoryResponse response = getHistoryResponse(credential, histID);
             if (response != null) {
-                if (response.getNextPageToken() != null) {
-                    //sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, response.getHistoryId().toString()).apply();
-                }
                 return true;
             }
         } catch (HttpResponseException e) {
@@ -281,7 +268,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private void performPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException {
         Log.i(TAG, "Performing Partial Sync");
         final ContentResolver contentResolver = context.getContentResolver();
-        BigInteger histID = getHistoryID();
+        BigInteger histID = GmailUtils.getHistoryID(context);
 
         if (histID == null) {
             Log.e(TAG, "No history ID available. (Maybe invalid or haven't done a full sync)");
@@ -294,7 +281,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             return;
         }
 
-        BigInteger newHistID = getHistoryID();
+        BigInteger newHistID = GmailUtils.getHistoryID(context);
         ArrayList<ContentProviderOperation> batch = new ArrayList<>();
         if (response.getHistory() != null) {
             if (!response.getHistory().isEmpty()) {
@@ -346,6 +333,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     deleteMessage(msgID.getId(), batch);
                 }
 
+                GmailUtils.setCurrentHistoryID(context,newHistID);
                 if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
                     Log.d(TAG, "Putting new messages in the intent.");
                     Intent serviceIntent = new Intent(context, IrisVoiceService.class);
@@ -366,8 +354,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     null,                           // No local observer
                     false);
 
-            Log.i(TAG, "Setting HistoryID: " + newHistID.toString());
-            sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, newHistID.toString()).apply();
+
+            GmailUtils.setCurrentHistoryID(context,newHistID);
         } catch (RemoteException | OperationApplicationException e) {
             Log.e(TAG, "Error updating database: " + e.toString());
         }

@@ -14,6 +14,7 @@ import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.ModifyMessageRequest;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +27,7 @@ import edu.uvawise.iris.sync.SyncUtils;
  */
 public abstract class GmailUtils {
 
+    private static SharedPreferences settings;
     private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
             GmailScopes.GMAIL_READONLY,
             GmailScopes.GMAIL_MODIFY};
@@ -100,6 +102,7 @@ public abstract class GmailUtils {
             public void run() {
                 Log.d(TAG, "Delete Thread Running");
                 GoogleAccountCredential credential = null;
+                BigInteger histID;
                 try {
                     credential = GmailUtils.getGmailAccountCredential(context, GmailUtils.getGmailAccountName(context));
 
@@ -108,6 +111,8 @@ public abstract class GmailUtils {
                         Log.d(TAG, "Deleting from server: " + id);
                         gmail.users().messages().trash(GmailUtils.getGmailAccountName(context), id).execute();
                     }
+                    histID = gmail.users().getProfile(GmailUtils.getGmailAccountName(context)).execute().getHistoryId();
+                    if (histID != null) setCurrentHistoryID(context,histID);
                 } catch (IOException | GoogleAuthException e) {
                     MiscUtils.runOnUiThread(context,new Runnable() {
                         @Override
@@ -132,6 +137,7 @@ public abstract class GmailUtils {
             public void run() {
                 Log.d(TAG, "Label removing Thread Running");
                 GoogleAccountCredential credential = null;
+                BigInteger histID;
                 try {
                     credential = getGmailAccountCredential(context, getGmailAccountName(context));
 
@@ -142,6 +148,8 @@ public abstract class GmailUtils {
                         request.setRemoveLabelIds(Collections.singletonList(label));
                         gmail.users().messages().modify(GmailUtils.getGmailAccountName(context), id, request).execute();
                     }
+                    histID = gmail.users().getProfile(GmailUtils.getGmailAccountName(context)).execute().getHistoryId();
+                    if (histID != null) setCurrentHistoryID(context,histID);
                 } catch (IOException | GoogleAuthException e) {
                     MiscUtils.runOnUiThread(context,new Runnable() {
                         @Override
@@ -158,5 +166,27 @@ public abstract class GmailUtils {
 
     public static void removeLabelFromMessage(final Context context, final String ID, final String label){
         removeLabelFromMessages(context,Collections.singletonList(ID),label);
+    }
+
+    public static BigInteger getHistoryID(Context context) {
+        if (settings == null) settings = context.getSharedPreferences(Constants.PREFS_NAME,Context.MODE_PRIVATE);
+        String histString = settings.getString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, Constants.PREFS_GMAIL_HISTORY_ID_DEFAULT);
+        BigInteger histID = null;
+        if (histString != null) {
+            histID = new BigInteger(histString);
+        }
+        return histID;
+    }
+
+    public static void setCurrentHistoryID(Context context, BigInteger histID){
+        setCurrentHistoryID(context,histID.toString());
+    }
+
+    public static void setCurrentHistoryID(Context context, String histID){
+        if (settings == null) settings = context.getSharedPreferences(Constants.PREFS_NAME,Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = settings.edit();
+        editor.putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID,histID);
+        editor.apply();
+        Log.i(TAG, "Setting HistoryID: " + histID);
     }
 }
