@@ -22,11 +22,6 @@ import java.util.HashMap;
  */
 public class IrisContentProvider extends ContentProvider {
 
-    private final static String TAG = IrisContentProvider.class.getSimpleName();
-
-
-    static HashMap<String,String> MESSAGES_PROJECTION_MAP;
-
     //Column Names
     public static final String ID = "_id";
     public static final String MESSAGE_ID = "msg_id";
@@ -38,8 +33,7 @@ public class IrisContentProvider extends ContentProvider {
     public static final String FROM = "_from";
     public static final String BODY = "body";
     public static final String ISREAD = "isRead";
-
-    static final String[] MESSAGE_PROJECTION = new String[] {
+    static final String[] MESSAGE_PROJECTION = new String[]{
             ID,
             MESSAGE_ID,
             SNIPPET,
@@ -51,7 +45,6 @@ public class IrisContentProvider extends ContentProvider {
             BODY,
             ISREAD
     };
-
     //URI Column numbers
     static final int MESSAGES = 1;
     static final int _ID = 2;
@@ -64,83 +57,57 @@ public class IrisContentProvider extends ContentProvider {
     static final int MSG_FROM = 9;
     static final int MSG_BODY = 10;
     static final int MSG_ISREAD = 11;
-
     static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
     static final String URL = "content://" + PROVIDER_NAME + "/messages";
     public static final Uri MESSAGES_URI = Uri.parse(URL);
-    public static final Uri ID_URI = Uri.parse(URL+"/"+ ID +"/"+_ID);
-    public static final Uri MESSAGE_ID_URI = Uri.parse(URL+"/"+ MESSAGE_ID +"/"+MSG_ID);
-    public static final Uri MESSAGE_SNIPPET_URI = Uri.parse(URL+"/"+SNIPPET+"/"+MSG_SNIPPET);
-    public static final Uri MESSAGE_HISTORYID_URI = Uri.parse(URL+"/"+HISTORYID+"/"+MSG_HISTORYID);
-    public static final Uri MESSAGE_INTERNALDATE_URI = Uri.parse(URL+"/"+INTERNALDATE+"/"+MSG_INTERNALDATE);
-    public static final Uri MESSAGE_DATE_URI = Uri.parse(URL+"/"+DATE+"/"+MSG_DATE);
-    public static final Uri MESSAGE_SUBJECT_URI = Uri.parse(URL+"/"+SUBJECT+"/"+MSG_SUBJECT);
-    public static final Uri MESSAGE_FROM_URI = Uri.parse(URL+"/"+FROM+"/"+MSG_FROM);
-    public static final Uri MESSAGE_BODY_URI = Uri.parse(URL+"/"+BODY+"/"+MSG_BODY);
-    public static final Uri MESSAGE_ISREAD_URI = Uri.parse(URL+"/"+ISREAD+"/"+MSG_ISREAD);
-
-
+    public static final Uri ID_URI = Uri.parse(URL + "/" + ID + "/" + _ID);
+    public static final Uri MESSAGE_ID_URI = Uri.parse(URL + "/" + MESSAGE_ID + "/" + MSG_ID);
+    public static final Uri MESSAGE_SNIPPET_URI = Uri.parse(URL + "/" + SNIPPET + "/" + MSG_SNIPPET);
+    public static final Uri MESSAGE_HISTORYID_URI = Uri.parse(URL + "/" + HISTORYID + "/" + MSG_HISTORYID);
+    public static final Uri MESSAGE_INTERNALDATE_URI = Uri.parse(URL + "/" + INTERNALDATE + "/" + MSG_INTERNALDATE);
+    public static final Uri MESSAGE_DATE_URI = Uri.parse(URL + "/" + DATE + "/" + MSG_DATE);
+    public static final Uri MESSAGE_SUBJECT_URI = Uri.parse(URL + "/" + SUBJECT + "/" + MSG_SUBJECT);
+    public static final Uri MESSAGE_FROM_URI = Uri.parse(URL + "/" + FROM + "/" + MSG_FROM);
+    public static final Uri MESSAGE_BODY_URI = Uri.parse(URL + "/" + BODY + "/" + MSG_BODY);
+    public static final Uri MESSAGE_ISREAD_URI = Uri.parse(URL + "/" + ISREAD + "/" + MSG_ISREAD);
     static final UriMatcher uriMatcher;
-    static{
+    static final String DATABASE_NAME = "Gmail";
+    static final String TABLE_NAME = "gmailMessages";
+    static final int DATABASE_VERSION = 9;
+    static final String CREATE_DB_TABLE =
+            " CREATE TABLE " + TABLE_NAME + "(" +
+                    " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
+                    " " + MESSAGE_ID + "           VARCHAR(32) NOT NULL," +
+                    " " + SNIPPET + "      VARCHAR(128)," +
+                    " " + HISTORYID + "    VARCHAR(32)  NOT NULL," +
+                    " " + INTERNALDATE + " VARCHAR(32)  NOT NULL," +
+                    " " + DATE + " VARCHAR(32)," +
+                    " " + SUBJECT + "      VARCHAR(256)," +
+                    " " + FROM + "         VARCHAR(256)," +
+                    " " + BODY + "         VARCHAR(1024)," +
+                    " " + ISREAD + "         BOOLEAN);";
+    private final static String TAG = IrisContentProvider.class.getSimpleName();
+    static HashMap<String, String> MESSAGES_PROJECTION_MAP;
+
+    static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(PROVIDER_NAME, "messages", MESSAGES);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ ID +"/#", _ID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ MESSAGE_ID +"/#", MSG_ID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+SNIPPET+"/#", MSG_SNIPPET);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+HISTORYID+"/#", MSG_HISTORYID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+INTERNALDATE+"/#", MSG_INTERNALDATE);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+DATE+"/#", MSG_DATE);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+SUBJECT+"/#", MSG_SUBJECT);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+FROM+"/#", MSG_FROM);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+BODY+"/#", MSG_BODY);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/"+ISREAD+"/#", MSG_ISREAD);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + ID + "/#", _ID);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + MESSAGE_ID + "/#", MSG_ID);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + SNIPPET + "/#", MSG_SNIPPET);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + HISTORYID + "/#", MSG_HISTORYID);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + INTERNALDATE + "/#", MSG_INTERNALDATE);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + DATE + "/#", MSG_DATE);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + SUBJECT + "/#", MSG_SUBJECT);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + FROM + "/#", MSG_FROM);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + BODY + "/#", MSG_BODY);
+        uriMatcher.addURI(PROVIDER_NAME, "messages/" + ISREAD + "/#", MSG_ISREAD);
     }
 
     /**
      * Database specific constant declarations
      */
     private SQLiteDatabase db;
-    static final String DATABASE_NAME = "Gmail";
-    static final String TABLE_NAME = "gmailMessages";
-    static final int DATABASE_VERSION = 9;
-    static final String CREATE_DB_TABLE =
-            " CREATE TABLE " + TABLE_NAME + "("+
-            " "+ ID +"           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,"+
-            " "+MESSAGE_ID+"           VARCHAR(32) NOT NULL,"+
-            " "+SNIPPET+"      VARCHAR(128),"+
-            " "+HISTORYID+"    VARCHAR(32)  NOT NULL,"+
-            " "+INTERNALDATE+" VARCHAR(32)  NOT NULL,"+
-            " "+DATE+" VARCHAR(32),"+
-            " "+SUBJECT+"      VARCHAR(256)," +
-            " "+FROM+"         VARCHAR(256)," +
-            " "+BODY+"         VARCHAR(1024)," +
-            " "+ISREAD+"         BOOLEAN);";
-
-    /**
-     * Helper class that actually creates and manages
-     * the provider's underlying data repository.
-     */
-    private static class DatabaseHelper extends SQLiteOpenHelper {
-        DatabaseHelper(Context context){
-            super(context, DATABASE_NAME, null, DATABASE_VERSION);
-        }
-
-        @Override
-        public void onCreate(SQLiteDatabase db)
-        {
-            db.execSQL(CREATE_DB_TABLE);
-        }
-
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            dropDB(db);
-        }
-
-        public void dropDB(SQLiteDatabase db){
-            db.execSQL("DROP TABLE IF EXISTS " +  TABLE_NAME);
-            onCreate(db);
-        }
-    }
 
     @Override
     public boolean onCreate() {
@@ -167,8 +134,7 @@ public class IrisContentProvider extends ContentProvider {
         /**
          * If record is added successfully
          */
-        if (rowID != -1)
-        {
+        if (rowID != -1) {
             Uri _uri = ContentUris.withAppendedId(MESSAGES_URI, rowID);
             getContext().getContentResolver().notifyChange(_uri, null);
             return _uri;
@@ -177,7 +143,7 @@ public class IrisContentProvider extends ContentProvider {
     }
 
     @Override
-    public Cursor query(Uri uri, String[] projection, String selection,String[] selectionArgs, String sortOrder) {
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables(TABLE_NAME);
 
@@ -195,32 +161,32 @@ public class IrisContentProvider extends ContentProvider {
                 break;
 
             case MSG_HISTORYID:
-                qb.appendWhere( HISTORYID + "=" + uri.getPathSegments().get(1));
+                qb.appendWhere(HISTORYID + "=" + uri.getPathSegments().get(1));
                 break;
 
             case MSG_INTERNALDATE:
-                qb.appendWhere( INTERNALDATE + "=" + uri.getPathSegments().get(1));
+                qb.appendWhere(INTERNALDATE + "=" + uri.getPathSegments().get(1));
                 break;
 
             case MSG_DATE:
-                qb.appendWhere( DATE + "=" + uri.getPathSegments().get(1));
+                qb.appendWhere(DATE + "=" + uri.getPathSegments().get(1));
                 break;
 
             case MSG_FROM:
-                qb.appendWhere( FROM + "=" + uri.getPathSegments().get(1));
+                qb.appendWhere(FROM + "=" + uri.getPathSegments().get(1));
                 break;
 
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
-        if (sortOrder == null || sortOrder == ""){
+        if (sortOrder == null || sortOrder == "") {
             /**
              * By default sort on date
              */
-            sortOrder = INTERNALDATE+" DESC";
+            sortOrder = INTERNALDATE + " DESC";
         }
-        Cursor c = qb.query(db,	projection,	selection, selectionArgs,null, null, sortOrder);
+        Cursor c = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
 
         /**
          * register to watch a content URI for changes
@@ -232,44 +198,44 @@ public class IrisContentProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         int count = 0;
-        switch (uriMatcher.match(uri)){
+        switch (uriMatcher.match(uri)) {
             case MESSAGES:
                 count = db.delete(TABLE_NAME, selection, selectionArgs);
                 break;
 
             case _ID:
                 String id = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, ID +  " = " + id +
+                count = db.delete(TABLE_NAME, ID + " = " + id +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_ID:
                 String id2 = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, MESSAGE_ID +  " = " + id2 +
+                count = db.delete(TABLE_NAME, MESSAGE_ID + " = " + id2 +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_HISTORYID:
                 String hID = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, HISTORYID +  " = " + hID +
+                count = db.delete(TABLE_NAME, HISTORYID + " = " + hID +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_INTERNALDATE:
                 String intDate = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, INTERNALDATE +  " = " + intDate +
+                count = db.delete(TABLE_NAME, INTERNALDATE + " = " + intDate +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_DATE:
                 String date = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, DATE +  " = " + date +
+                count = db.delete(TABLE_NAME, DATE + " = " + date +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_FROM:
                 String from = uri.getPathSegments().get(1);
-                count = db.delete( TABLE_NAME, FROM +  " = " + from +
+                count = db.delete(TABLE_NAME, FROM + " = " + from +
                         (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
@@ -285,43 +251,43 @@ public class IrisContentProvider extends ContentProvider {
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
         int count = 0;
 
-        switch (uriMatcher.match(uri)){
+        switch (uriMatcher.match(uri)) {
             case MESSAGES:
                 count = db.update(TABLE_NAME, values, selection, selectionArgs);
                 break;
 
             case _ID:
                 count = db.update(TABLE_NAME, values, ID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_ID:
                 count = db.update(TABLE_NAME, values, MESSAGE_ID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_HISTORYID:
                 count = db.update(TABLE_NAME, values, HISTORYID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_INTERNALDATE:
                 count = db.update(TABLE_NAME, values, INTERNALDATE + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_DATE:
                 count = db.update(TABLE_NAME, values, DATE + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             case MSG_FROM:
                 count = db.update(TABLE_NAME, values, FROM + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" +selection + ')' : ""), selectionArgs);
+                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             default:
-                throw new IllegalArgumentException("Unknown URI " + uri );
+                throw new IllegalArgumentException("Unknown URI " + uri);
         }
         getContext().getContentResolver().notifyChange(uri, null);
         return count;
@@ -329,7 +295,7 @@ public class IrisContentProvider extends ContentProvider {
 
     @Override
     public String getType(Uri uri) {
-        switch (uriMatcher.match(uri)){
+        switch (uriMatcher.match(uri)) {
             /**
              * Get all message records
              */
@@ -349,6 +315,31 @@ public class IrisContentProvider extends ContentProvider {
 
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
+        }
+    }
+
+    /**
+     * Helper class that actually creates and manages
+     * the provider's underlying data repository.
+     */
+    private static class DatabaseHelper extends SQLiteOpenHelper {
+        DatabaseHelper(Context context) {
+            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        }
+
+        @Override
+        public void onCreate(SQLiteDatabase db) {
+            db.execSQL(CREATE_DB_TABLE);
+        }
+
+        @Override
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            dropDB(db);
+        }
+
+        public void dropDB(SQLiteDatabase db) {
+            db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+            onCreate(db);
         }
     }
 }

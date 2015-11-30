@@ -67,14 +67,15 @@ import javax.mail.internet.MimeMessage;
 
 import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.utils.Constants;
+import edu.uvawise.iris.utils.GmailUtils;
 
 
 /**
  * Gmail Sync Adapter
- *
+ * <p/>
  * <p>This class is instantiated in {@link SyncService}, which also binds SyncAdapter to the system.
  * SyncAdapter should only be initialized in SyncService, never anywhere else.
- *
+ * <p/>
  * <p>The system calls onPerformSync() via an RPC call through the IBinder object supplied by
  * SyncService.
  */
@@ -110,12 +111,12 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
      * done here. Extending AbstractThreadedSyncAdapter ensures that all methods within SyncAdapter
      * run on a background thread. For this reason, blocking I/O and other long-running tasks can be
      * run <em>in situ</em>, and you don't have to set up a separate thread for them.
-     .
-     *
+     * .
+     * <p/>
      * <p>This is where we actually perform any work required to perform a sync.
      * {@link android.content.AbstractThreadedSyncAdapter} guarantees that this will be called on a non-UI thread,
      * so it is safe to peform blocking I/O here.
-     *
+     * <p/>
      * <p>The syncResult argument allows you to pass information back to the method that triggered
      * the sync.
      */
@@ -147,14 +148,14 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
 
         try {
-            GoogleAccountCredential credential = SyncUtils.getGmailAccountCredential(context, account.name);
+            GoogleAccountCredential credential = GmailUtils.getGmailAccountCredential(context, account.name);
             if (credential == null) {
                 Log.d(TAG, "Credential Null");
                 return;
             }
 
             if (gmail == null) {
-                gmail = SyncUtils.getGmailService(credential);
+                gmail = GmailUtils.getGmailService(credential);
             }
             Log.d(TAG, "Sync Running");
 
@@ -184,7 +185,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Log.i(TAG, "Synchronization complete");
     }
 
-    private void performFullSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException{
+    private void performFullSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException {
 
         final ContentResolver contentResolver = context.getContentResolver();
 
@@ -202,8 +203,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         if (response.getMessages() == null) return;
         BigInteger newHistID = null;
         BigInteger temp = null;
-        for(Message msgID : response.getMessages()){
-            temp = addMessage(credential,sharedPreferences,msgID.getId(),batch);
+        for (Message msgID : response.getMessages()) {
+            temp = addMessage(credential, sharedPreferences, msgID.getId(), batch);
             if (newHistID == null) newHistID = temp;
         }
 
@@ -220,7 +221,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
-    private BigInteger getHistoryID(){
+    private BigInteger getHistoryID() {
         SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
         String histString = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, Constants.PREFS_GMAIL_HISTORY_ID_DEFAULT);
         BigInteger histID = null;
@@ -231,12 +232,12 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     }
 
 
-    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID) throws IOException{
-        return getHistoryResponse( credential,  histID, null);
+    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID) throws IOException {
+        return getHistoryResponse(credential, histID, null);
     }
 
 
-    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID, String pageToken) throws IOException{
+    private ListHistoryResponse getHistoryResponse(GoogleAccountCredential credential, BigInteger histID, String pageToken) throws IOException {
         Gmail.Users.History.List list;
         try {
             if (histID != null) {
@@ -251,50 +252,52 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 }
             }
             return null;
-        } catch (HttpResponseException e){
-            if (e.getStatusCode() == 404){ Log.e(TAG,"ERROR 404-History ID was invalid or expired.");}
+        } catch (HttpResponseException e) {
+            if (e.getStatusCode() == 404) {
+                Log.e(TAG, "ERROR 404-History ID was invalid or expired.");
+            }
             e.printStackTrace();
             return null;
         }
     }
 
-    private boolean canPartialSync(GoogleAccountCredential credential,SharedPreferences sharedPreferences) throws IOException{
+    private boolean canPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws IOException {
         BigInteger histID = getHistoryID();
         if (histID == null) return false;
         try {
-            ListHistoryResponse response = getHistoryResponse(credential,histID);
+            ListHistoryResponse response = getHistoryResponse(credential, histID);
             if (response != null) {
                 if (response.getNextPageToken() != null) {
                     //sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, response.getHistoryId().toString()).apply();
                 }
                 return true;
             }
-        } catch (HttpResponseException e){
+        } catch (HttpResponseException e) {
             return false;
         }
         return false;
     }
 
-    private void performPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException{
-        Log.i(TAG,"Performing Partial Sync");
+    private void performPartialSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException {
+        Log.i(TAG, "Performing Partial Sync");
         final ContentResolver contentResolver = context.getContentResolver();
         BigInteger histID = getHistoryID();
 
-        if (histID == null){
-            Log.e(TAG,"No history ID available. (Maybe invalid or haven't done a full sync)");
+        if (histID == null) {
+            Log.e(TAG, "No history ID available. (Maybe invalid or haven't done a full sync)");
             return;
         }
-        Log.i(TAG,"Using history ID: "+histID);
-        ListHistoryResponse response = getHistoryResponse(credential,histID);
-        if (response == null){
-            Log.e(TAG,"No history response.");
+        Log.i(TAG, "Using history ID: " + histID);
+        ListHistoryResponse response = getHistoryResponse(credential, histID);
+        if (response == null) {
+            Log.e(TAG, "No history response.");
             return;
         }
 
         BigInteger newHistID = getHistoryID();
         ArrayList<ContentProviderOperation> batch = new ArrayList<>();
-        if (response.getHistory() != null){
-            if ( !response.getHistory().isEmpty()) {
+        if (response.getHistory() != null) {
+            if (!response.getHistory().isEmpty()) {
 
 
                 ArrayList<Message> addedMessages = new ArrayList<>();
@@ -344,11 +347,11 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 }
 
                 if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
-                    Log.d(TAG,"Putting new messages in the intent.");
+                    Log.d(TAG, "Putting new messages in the intent.");
                     Intent serviceIntent = new Intent(context, IrisVoiceService.class);
                     String[] stockArr = new String[newMessages.size()];
                     stockArr = newMessages.toArray(stockArr);
-                    serviceIntent.putExtra(Constants.INTENT_DATA_MESSAGES_ADDED,stockArr);
+                    serviceIntent.putExtra(Constants.INTENT_DATA_MESSAGES_ADDED, stockArr);
                     context.startService(serviceIntent);
                     newMessages.clear();
                 }
@@ -372,7 +375,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     }
 
 
-    private BigInteger addMessage(GoogleAccountCredential credential, SharedPreferences sharedPreferences,String msgID,ArrayList<ContentProviderOperation> batch) throws IOException, MessagingException{
+    private BigInteger addMessage(GoogleAccountCredential credential, SharedPreferences sharedPreferences, String msgID, ArrayList<ContentProviderOperation> batch) throws IOException, MessagingException {
         Properties props = new Properties();
         Session session = Session.getDefaultInstance(props, null);
         MimeMessage mimeMessage;
@@ -381,25 +384,25 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         try {
             message = gmail.users().messages().get(credential.getSelectedAccountName(), msgID).setFormat("raw").setFields("historyId,id,internalDate,labelIds,raw,snippet").execute();
         } catch (GoogleJsonResponseException e) {
-            Log.d(TAG,"Message no longer exists: "+msgID);
+            Log.d(TAG, "Message no longer exists: " + msgID);
             return null;
         }
         if (message == null) return null;
 
-        for (String labelID : message.getLabelIds()){
+        for (String labelID : message.getLabelIds()) {
             if (labelID.equals("CHAT")) return null;
         }
 
         String address = "Unknown";
         mimeMessage = new MimeMessage(session, new ByteArrayInputStream(Base64.decodeBase64(message.getRaw())));
 
-        if (mimeMessage.getFrom()[0] != null){
+        if (mimeMessage.getFrom()[0] != null) {
             InternetAddress add;
             add = new InternetAddress(mimeMessage.getFrom()[0].toString());
 
-            if (add.getPersonal() != null){
+            if (add.getPersonal() != null) {
                 address = add.getPersonal();
-            } else if (add.getAddress() != null){
+            } else if (add.getAddress() != null) {
                 address = add.getAddress();
             } else {
                 address = mimeMessage.getFrom()[0].toString();
@@ -428,7 +431,6 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.MESSAGE_ID + "=?", new String[]{msgID}).build());
         return true;
     }
-
 
 
 }

@@ -23,7 +23,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.Base64;
@@ -48,39 +47,32 @@ import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.utils.Constants;
 
 
-
 /**
  * Created by Bryan on 11/16/2015.
  */
 public class IrisVoiceService extends Service implements TextToSpeech.OnInitListener {
+    private static final String TAG = IrisVoiceService.class.getSimpleName();
+    private static boolean isRunning = false;
+    private final JsonFactory JSON_FACTORY = new JacksonFactory();
+    TextToSpeech textToSpeech;
+    Properties props = new Properties();
+    Session session = Session.getDefaultInstance(props, null);
     private WindowManager windowManager;
     private NotificationManager mNotificationManager;
     private Timer mTimer = new Timer();
-
-    private static boolean isRunning = false;
-
-    TextToSpeech textToSpeech;
-
-
     private List<Message> queuedMessages = new ArrayList<>();
     private List<MimeMessage> queuedMimeMessages = new ArrayList<>();
-
-    private final JsonFactory JSON_FACTORY = new JacksonFactory();
-
-    Properties props = new Properties();
-    Session session = Session.getDefaultInstance(props, null);
-
     private LinearLayout root;
     private TextView fromView;
     private TextView subjectView;
     private TextView bodyView;
-
-
-    private static final String TAG = IrisVoiceService.class.getSimpleName();
-
     private String currentMessageID = "";
 
     private MessagesObserver messagesObserver = new MessagesObserver(new Handler());
+
+    public static boolean isRunning() {
+        return isRunning;
+    }
 
     @Override
     public void onCreate() {
@@ -93,11 +85,11 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                         IrisContentProvider.MESSAGES_URI,
                         true,
                         messagesObserver);
-        textToSpeech=new TextToSpeech(this, this);
+        textToSpeech = new TextToSpeech(this, this);
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
 
         LayoutInflater inflater =
-                (LayoutInflater)this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+                (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
         root = new LinearLayout(this);
         root.setClickable(false);
@@ -112,7 +104,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         messageView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                Log.d(TAG,"MessageViewTouch");
+                Log.d(TAG, "MessageViewTouch");
                 v.setVisibility(View.GONE);
                 return false;
             }
@@ -149,7 +141,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 WindowManager.LayoutParams.TYPE_PHONE,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-                        WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 
         windowManager.addView(root, params);
 
@@ -240,19 +232,14 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
 
     }
 
-
-    public static boolean isRunning()
-    {
-        return isRunning;
-    }
-
-
     @Override
     public void onDestroy() {
         super.onDestroy();
         if (root != null) windowManager.removeView(root);
         mNotificationManager.cancelAll(); // Cancel the persistent notification.
-        if (mTimer != null) {mTimer.cancel();}
+        if (mTimer != null) {
+            mTimer.cancel();
+        }
         isRunning = false;
         getContentResolver().unregisterContentObserver(messagesObserver);
         if (textToSpeech != null) {
@@ -304,27 +291,27 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             try {
-                if (!queuedMessages.isEmpty()){
-                        Message msg;
-                        MimeMessage mimeMsg;
-                        String address = "";
-                        for (int i = 0; i < queuedMessages.size(); i++) {
-                            msg = queuedMessages.get(i);
-                            mimeMsg = queuedMimeMessages.get(i);
-                            if (mimeMsg.getFrom()[0] != null) {
-                                InternetAddress add;
-                                add = new InternetAddress(mimeMsg.getFrom()[0].toString());
+                if (!queuedMessages.isEmpty()) {
+                    Message msg;
+                    MimeMessage mimeMsg;
+                    String address = "";
+                    for (int i = 0; i < queuedMessages.size(); i++) {
+                        msg = queuedMessages.get(i);
+                        mimeMsg = queuedMimeMessages.get(i);
+                        if (mimeMsg.getFrom()[0] != null) {
+                            InternetAddress add;
+                            add = new InternetAddress(mimeMsg.getFrom()[0].toString());
 
-                                if (add.getPersonal() != null) {
-                                    address = add.getPersonal();
-                                } else if (add.getAddress() != null) {
-                                    address = add.getAddress();
-                                } else {
-                                    address = mimeMsg.getFrom()[0].toString();
-                                }
-
+                            if (add.getPersonal() != null) {
+                                address = add.getPersonal();
+                            } else if (add.getAddress() != null) {
+                                address = add.getAddress();
+                            } else {
+                                address = mimeMsg.getFrom()[0].toString();
                             }
+
                         }
+                    }
                     if (root.getVisibility() != View.VISIBLE) {
                         readCurrentMessage();
                         root.setVisibility(View.VISIBLE);

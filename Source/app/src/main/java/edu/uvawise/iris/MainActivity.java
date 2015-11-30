@@ -44,39 +44,35 @@ import com.google.api.services.gmail.model.ModifyMessageRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 
 import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.sync.SyncUtils;
 import edu.uvawise.iris.utils.Constants;
+import edu.uvawise.iris.utils.GmailUtils;
 
 /**
  * MainActivity - The main activity for the application providing entry. Shows a list of emails.
  */
 public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
-    private static final String TAG = MainActivity.class.getSimpleName();
-
-    SimpleCursorAdapter mAdapter;
-
-    // If non-null, this is the current filter the user has provided.
-    String mCurFilter;
-
-    GoogleAccountCredential credential; //Our Google(Gmail) account credential
-
     //Google Constants
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-
+    private static final String TAG = MainActivity.class.getSimpleName();
+    SimpleCursorAdapter mAdapter;
+    // If non-null, this is the current filter the user has provided.
+    String mCurFilter;
+    GoogleAccountCredential credential; //Our Google(Gmail) account credential
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
     ListView mListView;
 
 
     /**
      * Create the main activity.
+     *
      * @param savedInstanceState previously saved instance data.
      */
     @Override
@@ -85,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         setContentView(R.layout.activity_main); //Load main layout xml
 
         //Find and initialize the swipe-to-refresh view. And set its color scheme.
-        mSwipeRefreshLayout = (SwipeRefreshLayout)findViewById(R.id.swipe_container);
+        mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_container);
         mSwipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.accent);
 
          /*
@@ -106,13 +102,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         //Setup an initial Google account.
         SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
-        credential = SyncUtils.getInitialGmailAccountCredential(this)
+        credential = GmailUtils.getInitialGmailAccountCredential(this)
                 .setSelectedAccountName(settings.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, null));
 
-        if(PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), Constants.PREFS_SCREEN_ON_DEFAULT)){
-            Log.d(TAG,"Keep Screen On Flag - On");
+        if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.pref_keep_screen_on_key), Constants.PREFS_SCREEN_ON_DEFAULT)) {
+            Log.d(TAG, "Keep Screen On Flag - On");
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        } else {Log.d(TAG, "Keep Screen On Flag - Off");}
+        } else {
+            Log.d(TAG, "Keep Screen On Flag - Off");
+        }
 
 
         SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
@@ -131,11 +129,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         };
         PreferenceManager.getDefaultSharedPreferences(this).registerOnSharedPreferenceChangeListener(prefListener);
 
-        mListView = (ListView)findViewById(R.id.emailList);
+        mListView = (ListView) findViewById(R.id.emailList);
         mAdapter = new SimpleCursorAdapter(this,
                 R.layout.list_email_item, null,
-                new String[] {IrisContentProvider.SUBJECT,IrisContentProvider.FROM,IrisContentProvider.DATE},
-                new int[] { R.id.subjectTextview, R.id.fromTextView, R.id.dateTextView }, 0);
+                new String[]{IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE},
+                new int[]{R.id.subjectTextview, R.id.fromTextView, R.id.dateTextView}, 0);
         mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
         mListView.setAdapter(mAdapter);
         mListView.setEmptyView(findViewById(R.id.empty_list_item));
@@ -180,69 +178,25 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 switch (item.getItemId()) {
 
                     case R.id.action_delete:
-                        new Thread(new Runnable() { public void run() {
-                            Log.d(TAG,"Thread Running");
-                                    GoogleAccountCredential credential = null;
-                                    try {
-                                        credential = SyncUtils.getGmailAccountCredential(getContext(), SyncUtils.getGmailAccountName(getContext()));
-
-                                        final Gmail gmail = SyncUtils.getGmailService(credential);
-                                        for(String id : gatherSelections()) {
-                                                Log.d(TAG,"Deleting from server: "+id);
-                                                gmail.users().messages().trash(SyncUtils.getGmailAccountName(getContext()), id).execute();
-                                        }
-                                    } catch (IOException | GoogleAuthException e) {
-                                        runOnUiThread(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                Toast.makeText(getContext(),"Error deleting message(s).",Toast.LENGTH_SHORT).show();
-                                            }
-                                        });
-                                        e.printStackTrace();
-                                    }
-
-                        } }).start();
+                        GmailUtils.deleteMessages(getContext(),gatherSelections());
                         return true;
                     case R.id.action_archive:
-                        new Thread(new Runnable() { public void run() {
-                            Log.d(TAG,"Thread Running");
-                            GoogleAccountCredential credential = null;
-                            try {
-                                credential = SyncUtils.getGmailAccountCredential(getContext(), SyncUtils.getGmailAccountName(getContext()));
-
-                                final Gmail gmail = SyncUtils.getGmailService(credential);
-                                for(String id : gatherSelections()) {
-                                    Log.d(TAG,"Archiving "+id);
-                                    ModifyMessageRequest request = new ModifyMessageRequest();
-                                    request.setRemoveLabelIds(Collections.singletonList("INBOX"));
-                                    gmail.users().messages().modify(SyncUtils.getGmailAccountName(getContext()),id,request).execute();
-                                }
-                            } catch (IOException | GoogleAuthException e) {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(getContext(),"Error archiving message(s).",Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                                e.printStackTrace();
-                            }
-
-                        } }).start();
+                        GmailUtils.archiveMessages(getContext(),gatherSelections());
                         return true;
                     default:
                         return false;
                 }
             }
 
-            public ArrayList<String> gatherSelections(){
+            public ArrayList<String> gatherSelections() {
                 final ContentResolver contentResolver = getContext().getContentResolver();
                 ArrayList<ContentProviderOperation> batch = new ArrayList<>();
                 final ArrayList<String> messageIDs = new ArrayList<>();
                 String[] checkedIDStrings = new String[mListView.getCheckedItemIds().length];
-                for(int i=0; i < mListView.getCheckedItemIds().length;i++){
-                    Log.d(TAG,"Delete MESSAGE_ID: "+mListView.getCheckedItemIds()[i]);
-                    batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.ID +" = ?",new String[]{mListView.getCheckedItemIds()[i]+""}).build());
-                    checkedIDStrings[i] = ""+mListView.getCheckedItemIds()[i];
+                for (int i = 0; i < mListView.getCheckedItemIds().length; i++) {
+                    Log.d(TAG, "Delete MESSAGE_ID: " + mListView.getCheckedItemIds()[i]);
+                    batch.add(ContentProviderOperation.newDelete(IrisContentProvider.MESSAGES_URI).withSelection(IrisContentProvider.ID + " = ?", new String[]{mListView.getCheckedItemIds()[i] + ""}).build());
+                    checkedIDStrings[i] = "" + mListView.getCheckedItemIds()[i];
                     Log.d(TAG, "ID String: " + checkedIDStrings[i]);
                 }
                 try {
@@ -266,8 +220,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         Log.d(TAG, "Null cursor");
                     }
 
-                    ContentProviderResult[] result = contentResolver.applyBatch(Constants.SYNC_AUTH,batch);
-                    Log.d(TAG,"Deleted: "+result.length);
+                    ContentProviderResult[] result = contentResolver.applyBatch(Constants.SYNC_AUTH, batch);
+                    Log.d(TAG, "Deleted: " + result.length);
                     contentResolver.notifyChange(
                             IrisContentProvider.MESSAGES_URI, // URI where data was modified
                             null,                           // No local observer
@@ -318,7 +272,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onResume();
 
         if (isGooglePlayServicesAvailable()) {
-           refreshResults();
+            refreshResults();
         }
     }
 
@@ -326,16 +280,17 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * Called when an activity launched here (specifically, AccountPicker
      * and authorization) exits, giving you the requestCode you started it with,
      * the resultCode it returned, and any additional data from it.
+     *
      * @param requestCode code indicating which activity result is incoming.
-     * @param resultCode code indicating the result of the incoming
-     *     activity result.
-     * @param data Intent (containing result data) returned by incoming
-     *     activity result.
+     * @param resultCode  code indicating the result of the incoming
+     *                    activity result.
+     * @param data        Intent (containing result data) returned by incoming
+     *                    activity result.
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch(requestCode) {
+        switch (requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
                     isGooglePlayServicesAvailable();
@@ -348,7 +303,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     String accountName =
                             data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        Log.d(TAG, "Account Picked - "+accountName );
+                        Log.d(TAG, "Account Picked - " + accountName);
                         credential.setSelectedAccountName(accountName);
                         SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
@@ -357,7 +312,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         SyncUtils.enableSync(this);
                     }
                 } else if (resultCode == RESULT_CANCELED) {
-                    Toast.makeText(this,R.string.error_no_account_chosen,Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, R.string.error_no_account_chosen, Toast.LENGTH_LONG).show();
                 }
                 break;
             case REQUEST_AUTHORIZATION:
@@ -396,7 +351,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             case R.id.action_service:
                 Intent serviceIntent = new Intent(this, IrisVoiceService.class);
-                if (!IrisVoiceService.isRunning()){
+                if (!IrisVoiceService.isRunning()) {
                     item.setIcon(android.R.drawable.ic_media_pause);
                     startService(serviceIntent);
                 } else {
@@ -413,7 +368,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    private boolean hasPermission(){
+    private boolean hasPermission() {
         boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_DENIED;
         if (result) {
             ActivityCompat.requestPermissions(this,
@@ -432,7 +387,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * user can pick an account.
      */
     private void refreshResults() {
-        if (hasPermission()){
+        if (hasPermission()) {
 
             if (credential.getSelectedAccountName() == null) {
                 chooseAccount();
@@ -447,7 +402,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     /**
      * Perform manual sync
      */
-    private void forceSync(){
+    private void forceSync() {
         if (hasPermission()) {
             if (credential.getSelectedAccountName() == null) {
                 chooseAccount();
@@ -477,6 +432,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     /**
      * Checks whether the device currently has a network connection.
+     *
      * @return true if the device has a network connection, false otherwise.
      */
     private boolean isDeviceOnline() {
@@ -490,8 +446,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * Check that Google Play services APK is installed and up to date. Will
      * launch an error dialog for the user to update Google Play Services if
      * possible.
+     *
      * @return true if Google Play Services is available and up to
-     *     date on this device; false otherwise.
+     * date on this device; false otherwise.
      */
     private boolean isGooglePlayServicesAvailable() {
         final int connectionStatusCode =
@@ -499,7 +456,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         if (GooglePlayServicesUtil.isUserRecoverableError(connectionStatusCode)) {
             showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
             return false;
-        } else if (connectionStatusCode != ConnectionResult.SUCCESS ) {
+        } else if (connectionStatusCode != ConnectionResult.SUCCESS) {
             return false;
         }
         return true;
@@ -508,8 +465,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     /**
      * Display an error dialog showing that Google Play Services is missing
      * or out of date.
+     *
      * @param connectionStatusCode code describing the presence (or lack of)
-     *     Google Play Services on this device.
+     *                             Google Play Services on this device.
      */
     void showGooglePlayServicesAvailabilityErrorDialog(
             final int connectionStatusCode) {
@@ -526,7 +484,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
 
-    private Context getContext(){
+    private Context getContext() {
         return this;
     }
 
@@ -554,7 +512,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // Now create and return a CursorLoader that will take care of
         // creating a Cursor for the data being displayed.
         return new CursorLoader(this, baseUri,
-                new String[] {"_id",IrisContentProvider.SUBJECT,IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
+                new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
                 null);
     }
 

@@ -30,14 +30,9 @@ import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 
 import com.google.android.gms.auth.GoogleAuthException;
-import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.GmailScopes;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import edu.uvawise.iris.R;
@@ -52,9 +47,6 @@ public class SyncUtils {
     private static final String TAG = SyncUtils.class.getSimpleName();
     private static final long SYNC_FREQUENCY = 60;
 
-    private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
-            GmailScopes.GMAIL_READONLY,
-            GmailScopes.GMAIL_MODIFY};
 
     /**
      * Syncs now for the current account.
@@ -126,15 +118,16 @@ public class SyncUtils {
 
     /**
      * Check if sync is enabled.
-     * @param context  The context to run in.
+     *
+     * @param context The context to run in.
      */
-    public static boolean isSyncEnabled(Context context){
+    public static boolean isSyncEnabled(Context context) {
         SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
         Account[] am = AccountManager.get(context).getAccountsByType(Constants.ACCOUNT_TYPE);
-        if (!sharedPreferences.getBoolean(Constants.PREFS_KEY_GMAIL_SYNCING,false)) return false;
+        if (!sharedPreferences.getBoolean(Constants.PREFS_KEY_GMAIL_SYNCING, false)) return false;
         for (Account account : am) {
             if (sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "").equals(account.name)) {
-                boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account,Constants.SYNC_AUTH);
+                boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account, Constants.SYNC_AUTH);
                 boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
                 if (isMasterSyncEnabled && isYourAccountSyncEnabled) return true;
             }
@@ -178,18 +171,19 @@ public class SyncUtils {
         // Recommend a schedule for automatic synchronization. The system may modify this based
         // on other scheduled syncs and network utilization.
         ContentResolver.addPeriodicSync(
-                account, Constants.SYNC_AUTH, new Bundle(), SYNC_FREQUENCY*min);
+                account, Constants.SYNC_AUTH, new Bundle(), SYNC_FREQUENCY * min);
     }
 
 
     /**
-     *  Show a notification stating that Iris needs permission for the selected account. Clicking
-     *  the notification will prompt them to give access via Google's API
+     * Show a notification stating that Iris needs permission for the selected account. Clicking
+     * the notification will prompt them to give access via Google's API
+     *
      * @param context The context to run in.
-     * @param e The permission intent
+     * @param e       The permission intent
      * @param account The account name that needs permission.
      */
-    public static void permissionNotification(Context context, Intent e, String account){
+    public static void permissionNotification(Context context, Intent e, String account) {
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 context, 0, e, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context).setAutoCancel(true)
@@ -205,7 +199,8 @@ public class SyncUtils {
 
     /**
      * Remove a notification from the notification shade.
-     * @param context The context to run in.
+     *
+     * @param context        The context to run in.
      * @param notificationId The ID of the notification
      */
     public static void cancelPermissionNotification(Context context, int notificationId) {
@@ -217,9 +212,9 @@ public class SyncUtils {
     /**
      * Gets the google account credential.
      *
-     * @param context The context to run in.
+     * @param context     The context to run in.
      * @param accountName The name of the account to retrieve.
-     * @param scope The scopes needed from the account.
+     * @param scope       The scopes needed from the account.
      */
     public static GoogleAccountCredential getGoogleAccountCredential(
             Context context, String accountName, List<String> scope) throws IOException, GoogleAuthException {
@@ -227,58 +222,6 @@ public class SyncUtils {
         if (!accountName.equals("")) credential.setSelectedAccountName(accountName);
         credential.getToken();
         return credential;
-    }
-
-    /**
-     *  Gets the Google Account Credential with Gmail scopes
-     * @param context The context to run in.
-     * @param accountName The name of the account to retrieve
-     * @throws IOException
-     * @throws GoogleAuthException
-     */
-    public static GoogleAccountCredential getGmailAccountCredential(Context context,String accountName) throws IOException, GoogleAuthException {
-        return getGoogleAccountCredential(context, accountName, Arrays.asList(SCOPES));
-    }
-
-    /**
-     * Get an initial, blank Gmail credential
-     * @param context  The context to run in.
-     * @return
-     */
-    public static GoogleAccountCredential getInitialGmailAccountCredential(Context context){
-        return GoogleAccountCredential.usingOAuth2(context, Arrays.asList(SCOPES));
-    }
-
-    /**
-     * Gets the OAuth2 token for the specified account.
-     *
-     * @param context  The context to run in.
-     * @param accountName The account name to get the token for.
-     * @param scope The scopes needed for the account.
-     */
-    public static String getToken(Context context, String accountName, List<String> scope)
-            throws IOException, GoogleAuthException {
-        GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, scope);
-        credential.setSelectedAccountName(accountName);
-        return credential.getToken();
-    }
-
-    /**
-     * Gets the Gmail API Service
-     * @param credential The account credential that will give permission to the API
-     * @return The Gmail Service.
-     */
-    public static Gmail getGmailService(GoogleAccountCredential credential){
-       return new com.google.api.services.gmail.Gmail.Builder(
-               AndroidHttp.newCompatibleTransport(), JacksonFactory.getDefaultInstance(), credential).setApplicationName("Iris").build();
-    }
-
-    public static String getGmailAccountName(Context context){
-        String account = null;
-        SharedPreferences sharedPreferences = context.getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
-        account = sharedPreferences.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, "");
-        if (account.equals("")) Log.d(TAG, "Saved account name is null");
-        return account;
     }
 
 

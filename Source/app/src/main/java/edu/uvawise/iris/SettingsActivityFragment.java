@@ -67,8 +67,7 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         }
         if (p instanceof EditTextPreference) {
             EditTextPreference editTextPref = (EditTextPreference) p;
-            if (p.getTitle().toString().contains("assword"))
-            {
+            if (p.getTitle().toString().contains("assword")) {
                 p.setSummary("******");
             } else {
                 p.setSummary(editTextPref.getText());
