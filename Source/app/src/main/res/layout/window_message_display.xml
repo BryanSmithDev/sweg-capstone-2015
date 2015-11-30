@@ -49,7 +49,9 @@
         android:focusable="false"
         android:focusableInTouchMode="false"
         android:layout_weight="4"
-        style="@style/autoscroll"/>
+        android:maxLines="5"
+        android:maxLength="99"
+        style="@style/autoscroll_multiline" />
 
 
     <Button
