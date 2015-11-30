@@ -3,11 +3,12 @@
     android:layout_width="match_parent" android:layout_height="72dp"
     android:paddingRight="16dp"
     android:paddingLeft="16dp"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@drawable/email_list_item_selector">
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="left"
+        android:gravity="start"
         android:weightSum="14">
         <TextView
             android:layout_width="match_parent"
@@ -24,8 +25,8 @@
             android:layout_weight="5" />
 
         <TextView
-            android:gravity="right"
-            android:layout_gravity="right"
+            android:gravity="end"
+            android:layout_gravity="end"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceSmall"
@@ -40,7 +41,7 @@
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="left"
+        android:gravity="start"
         android:weightSum="10">
         <TextView
             android:layout_width="wrap_content"
@@ -48,9 +49,6 @@
             android:textAppearance="?android:attr/textAppearanceSmall"
             android:text="Small Text"
             android:id="@+id/subjectTextview"
-            android:layout_below="@+id/fromTextView"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
             android:textColor="@color/secondary_text"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
@@ -59,6 +57,5 @@
             style="@style/autoscroll"/>
 
     </TableRow>
-
 
 </LinearLayout>
