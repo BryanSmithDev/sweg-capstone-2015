@@ -124,6 +124,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
+                queuedMimeMessages.remove(0);
                 readCurrentMessage();
                 if (currentMessageID != null && !currentMessageID.equals(""))
                     GmailUtils.removeLabelFromMessage(getApplicationContext(),
@@ -137,6 +138,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
+                queuedMimeMessages.remove(0);
                 readCurrentMessage();
                 if (currentMessageID != null && !currentMessageID.equals("")) {
                     GmailUtils.deleteMessage(getApplicationContext(), currentMessageID);
