@@ -17,4 +17,7 @@
     <string name="action_archive">Archive</string>
     <string name="button_keep">Keep</string>
     <string name="button_delete">Delete</string>
+    <string name="dialog_logout_message">Are you sure you want to logout?</string>
+    <string name="dialog_logout_yes">Yes</string>
+    <string name="dialog_logout_no">No</string>
 </resources>

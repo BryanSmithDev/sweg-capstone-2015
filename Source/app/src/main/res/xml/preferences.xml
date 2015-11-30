@@ -16,6 +16,11 @@
         android:entryValues="@array/sync_freqs_values"
         android:defaultValue='3'/>
 
+    <Preference
+        android:key="logout"
+        android:title="Login">
+    </Preference>
+
 
 
 </PreferenceScreen>

@@ -7,6 +7,7 @@ import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.OperationApplicationException;
 import android.content.SharedPreferences;
@@ -25,7 +26,9 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.view.menu.ActionMenuItemView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -35,16 +38,11 @@ import android.widget.AbsListView;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.google.android.gms.auth.GoogleAuthException;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesUtil;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.services.gmail.Gmail;
-import com.google.api.services.gmail.model.ModifyMessageRequest;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 
 import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.sync.IrisContentProvider;
@@ -62,6 +60,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     private static final String TAG = MainActivity.class.getSimpleName();
+    public static final String METHOD_TO_CALL = "KEY_METHOD_TO_CALL";
+    public static final int LOGOUT = 0;
+    public static final int PAUSE_SERVICE = 1;
     SimpleCursorAdapter mAdapter;
     // If non-null, this is the current filter the user has provided.
     String mCurFilter;
@@ -69,6 +70,48 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
     ListView mListView;
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        final SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+        int value = -1;
+        if (intent != null) {
+            value = intent.getIntExtra(METHOD_TO_CALL, -1);
+        }
+        if (-1 != value) {
+            switch (value){
+                case LOGOUT: //Logout & clear data
+                    if (credential.getSelectedAccountName() != null) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                        builder.setMessage(R.string.dialog_logout_message)
+                                .setTitle(credential.getSelectedAccountName());
+                        builder.setPositiveButton(R.string.dialog_logout_yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                SharedPreferences.Editor editor = settings.edit();
+                                editor.clear().apply();
+                                getContentResolver().delete(IrisContentProvider.MESSAGES_URI, null, null);
+                                credential.setSelectedAccountName(null);
+                            }
+                        });
+                        builder.setNegativeButton(R.string.dialog_logout_no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                            }
+                        });
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                    } else {
+                        chooseAccount();
+                    }
+                    break;
+                case PAUSE_SERVICE: //Stop service.
+                    Intent serviceIntent = new Intent(this, IrisVoiceService.class);
+                    stopService(serviceIntent);
+                    ((ActionMenuItemView)findViewById(R.id.action_service)).setIcon(getResources().getDrawable(android.R.drawable.ic_media_play));
+                    break;
+
+            }
+        }
+        super.onNewIntent(intent);
+    }
 
     /**
      * Create the main activity.
@@ -79,6 +122,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); //Load main layout xml
+
+        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
+
+
 
         //Find and initialize the swipe-to-refresh view. And set its color scheme.
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_container);
@@ -101,7 +148,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
 
         //Setup an initial Google account.
-        SharedPreferences settings = getSharedPreferences(Constants.PREFS_NAME, Context.MODE_PRIVATE);
         credential = GmailUtils.getInitialGmailAccountCredential(this)
                 .setSelectedAccountName(settings.getString(Constants.PREFS_KEY_GMAIL_ACCOUNT_NAME, null));
 

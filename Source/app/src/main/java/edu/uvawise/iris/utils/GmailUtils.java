@@ -2,7 +2,6 @@ package edu.uvawise.iris.utils;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
 

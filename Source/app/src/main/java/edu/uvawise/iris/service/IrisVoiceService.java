@@ -32,7 +32,6 @@ import com.google.api.services.gmail.model.Message;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -235,14 +234,21 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
      */
     private void showNotification() {
 
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), 0);
+        Intent mainIntent = new Intent(this, MainActivity.class);
+        mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0, mainIntent, 0);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(this);
-
         mBuilder.setSmallIcon(R.drawable.ic_stat_iris);
         mBuilder.setContentTitle("Iris Service is Running");
         mBuilder.setContentText("Emails will be read out as they come in.");
         mBuilder.setContentIntent(contentIntent);
         mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        Intent pauseIntent = new Intent(this,MainActivity.class);
+        pauseIntent.putExtra(MainActivity.METHOD_TO_CALL, MainActivity.PAUSE_SERVICE);
+        pauseIntent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        pauseIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pausePendingIntent = PendingIntent.getActivity(this,1,pauseIntent,0);
+        mBuilder.addAction(R.drawable.ic_stat_pause,"Pause Reading Service",pausePendingIntent);
         Notification notif = mBuilder.build();
         notif.flags = notif.flags
                 | Notification.FLAG_ONGOING_EVENT;
