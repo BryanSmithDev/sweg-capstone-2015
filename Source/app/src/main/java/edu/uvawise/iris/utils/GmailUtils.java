@@ -123,7 +123,7 @@ public abstract class GmailUtils {
         }).start();
     }
 
-    public static void deleteMessage(final Context context, final String ID) throws IOException, GoogleAuthException{
+    public static void deleteMessage(final Context context, final String ID){
         deleteMessages(context,Collections.singletonList(ID));
     }
 

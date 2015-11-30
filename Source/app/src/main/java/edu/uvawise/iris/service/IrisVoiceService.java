@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
@@ -31,6 +32,7 @@ import com.google.api.services.gmail.model.Message;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -45,6 +47,7 @@ import edu.uvawise.iris.MainActivity;
 import edu.uvawise.iris.R;
 import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.utils.Constants;
+import edu.uvawise.iris.utils.GmailUtils;
 
 
 /**
@@ -116,21 +119,35 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         Button keepButton = (Button) messageView.findViewById(R.id.keepButton);
         Button deleteButton = (Button) messageView.findViewById(R.id.deleteButton);
 
+
         keepButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
                 readCurrentMessage();
-                //TODO: Mark message as read
+                if (currentMessageID != null && !currentMessageID.equals(""))
+                    GmailUtils.removeLabelFromMessage(getApplicationContext(),
+                            currentMessageID,
+                            "UNREAD");
             }
         });
 
+        //TODO: Remove messages from local database and notify contentobservers
         deleteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
                 readCurrentMessage();
-                //TODO: Delete Message
+                if (currentMessageID != null && !currentMessageID.equals("")) {
+                    GmailUtils.deleteMessage(getApplicationContext(), currentMessageID);
+                    ContentResolver contentResolver = getContentResolver();
+                    int result = contentResolver.delete(IrisContentProvider.MESSAGES_URI,IrisContentProvider.MESSAGE_ID+" = ?", new String[] {currentMessageID});
+                    Log.d(TAG,"Deleted: "+result);
+                    contentResolver.notifyChange(
+                            IrisContentProvider.MESSAGES_URI, // URI where data was modified
+                            null,                           // No local observer
+                            false);
+                }
             }
         });
 
