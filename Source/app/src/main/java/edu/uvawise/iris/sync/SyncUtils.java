@@ -61,9 +61,10 @@ public class SyncUtils {
         // Disable sync backoff and ignore sync preferences. In other words...perform sync NOW!
         b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
         b.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
+
         for (Account account : accounts) {
             if (account.name.equals(googleAccount)) {
-                ContentResolver.cancelSync(account, Constants.SYNC_AUTH);
+                //ContentResolver.cancelSync(account, Constants.SYNC_AUTH);
                 ContentResolver.requestSync(account, Constants.SYNC_AUTH, b);
                 break;
             }

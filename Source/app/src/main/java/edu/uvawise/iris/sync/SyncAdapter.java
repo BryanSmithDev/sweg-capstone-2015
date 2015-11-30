@@ -165,9 +165,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 } else {
                     performFullSync(credential, sharedPreferences);
                 }
-            } catch (MessagingException e) {
-                Log.e(TAG, "Error Syncing");
-            } catch (SocketTimeoutException e) {
+            } catch (MessagingException | SocketTimeoutException e) {
                 Log.e(TAG, "Error Syncing");
             }
 
@@ -186,7 +184,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     }
 
     private void performFullSync(GoogleAccountCredential credential, SharedPreferences sharedPreferences) throws MessagingException, IOException {
-
+        Log.i(TAG, "Performing Full Sync");
         final ContentResolver contentResolver = context.getContentResolver();
 
         contentResolver.delete(IrisContentProvider.MESSAGES_URI, null, null);
@@ -214,8 +212,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     IrisContentProvider.MESSAGES_URI, // URI where data was modified
                     null,                           // No local observer
                     false);
-            Log.i(TAG, "Setting HistoryID: " + newHistID.toString());
-            sharedPreferences.edit().putString(Constants.PREFS_KEY_GMAIL_HISTORY_ID, newHistID.toString()).apply();
+            GmailUtils.setCurrentHistoryID(context,newHistID);
         } catch (RemoteException | OperationApplicationException e) {
             Log.e(TAG, "Error updating database: " + e.toString());
         }
