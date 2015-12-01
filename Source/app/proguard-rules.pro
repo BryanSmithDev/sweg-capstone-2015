@@ -15,3 +15,10 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+-renamesourcefileattribute SourceFile
+-keepattributes SourceFile,LineNumberTable
+
+-dontwarn com.sun.**
+-dontwarn javax.activation.**
+-dontwarn com.google.common.**
+-dontwarn javax.activation.**
