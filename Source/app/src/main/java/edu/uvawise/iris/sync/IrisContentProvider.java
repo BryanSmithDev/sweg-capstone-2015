@@ -12,15 +12,16 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.support.annotation.NonNull;
-import android.text.TextUtils;
 
 import java.util.HashMap;
 
 
 /**
- * This is content provider that manages the local copy of gmail messages.
+ * This is content provider that manages the local copy of Gmail messages.
  */
 public class IrisContentProvider extends ContentProvider {
+
+    private final static String TAG = IrisContentProvider.class.getSimpleName(); //LOG TAG
 
     //Column Names
     public static final String ID = "_id";
@@ -33,43 +34,14 @@ public class IrisContentProvider extends ContentProvider {
     public static final String FROM = "_from";
     public static final String BODY = "body";
     public static final String ISREAD = "isRead";
-    static final String[] MESSAGE_PROJECTION = new String[]{
-            ID,
-            MESSAGE_ID,
-            SNIPPET,
-            HISTORYID,
-            INTERNALDATE,
-            DATE,
-            SUBJECT,
-            FROM,
-            BODY,
-            ISREAD
-    };
+
     //URI Column numbers
     static final int MESSAGES = 1;
-    static final int _ID = 2;
-    static final int MSG_ID = 3;
-    static final int MSG_SNIPPET = 4;
-    static final int MSG_HISTORYID = 5;
-    static final int MSG_INTERNALDATE = 6;
-    static final int MSG_DATE = 7;
-    static final int MSG_SUBJECT = 8;
-    static final int MSG_FROM = 9;
-    static final int MSG_BODY = 10;
-    static final int MSG_ISREAD = 11;
     static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
     static final String URL = "content://" + PROVIDER_NAME + "/messages";
     public static final Uri MESSAGES_URI = Uri.parse(URL);
-    public static final Uri ID_URI = Uri.parse(URL + "/" + ID + "/" + _ID);
-    public static final Uri MESSAGE_ID_URI = Uri.parse(URL + "/" + MESSAGE_ID + "/" + MSG_ID);
-    public static final Uri MESSAGE_SNIPPET_URI = Uri.parse(URL + "/" + SNIPPET + "/" + MSG_SNIPPET);
-    public static final Uri MESSAGE_HISTORYID_URI = Uri.parse(URL + "/" + HISTORYID + "/" + MSG_HISTORYID);
-    public static final Uri MESSAGE_INTERNALDATE_URI = Uri.parse(URL + "/" + INTERNALDATE + "/" + MSG_INTERNALDATE);
-    public static final Uri MESSAGE_DATE_URI = Uri.parse(URL + "/" + DATE + "/" + MSG_DATE);
-    public static final Uri MESSAGE_SUBJECT_URI = Uri.parse(URL + "/" + SUBJECT + "/" + MSG_SUBJECT);
-    public static final Uri MESSAGE_FROM_URI = Uri.parse(URL + "/" + FROM + "/" + MSG_FROM);
-    public static final Uri MESSAGE_BODY_URI = Uri.parse(URL + "/" + BODY + "/" + MSG_BODY);
-    public static final Uri MESSAGE_ISREAD_URI = Uri.parse(URL + "/" + ISREAD + "/" + MSG_ISREAD);
+
+    //Database info
     static final UriMatcher uriMatcher;
     static final String DATABASE_NAME = "Gmail";
     static final String TABLE_NAME = "gmailMessages";
@@ -86,22 +58,12 @@ public class IrisContentProvider extends ContentProvider {
                     " " + FROM + "         VARCHAR(256)," +
                     " " + BODY + "         VARCHAR(1024)," +
                     " " + ISREAD + "         BOOLEAN);";
-    private final static String TAG = IrisContentProvider.class.getSimpleName();
+
     static HashMap<String, String> MESSAGES_PROJECTION_MAP;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(PROVIDER_NAME, "messages", MESSAGES);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + ID + "/#", _ID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + MESSAGE_ID + "/#", MSG_ID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + SNIPPET + "/#", MSG_SNIPPET);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + HISTORYID + "/#", MSG_HISTORYID);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + INTERNALDATE + "/#", MSG_INTERNALDATE);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + DATE + "/#", MSG_DATE);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + SUBJECT + "/#", MSG_SUBJECT);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + FROM + "/#", MSG_FROM);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + BODY + "/#", MSG_BODY);
-        uriMatcher.addURI(PROVIDER_NAME, "messages/" + ISREAD + "/#", MSG_ISREAD);
     }
 
     /**
@@ -109,6 +71,10 @@ public class IrisContentProvider extends ContentProvider {
      */
     private SQLiteDatabase db;
 
+    /**
+     * Ran when the content provider is created.
+     * @return True if the provider loaded successfully
+     */
     @Override
     public boolean onCreate() {
         Context context = getContext();
@@ -122,6 +88,12 @@ public class IrisContentProvider extends ContentProvider {
         return (db != null);
     }
 
+    /**
+     * Insert values into the database
+     * @param uri URI to use
+     * @param values Values to insert
+     * @return URI with appened ID at the end.
+     */
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues values) {
 
@@ -142,6 +114,24 @@ public class IrisContentProvider extends ContentProvider {
         throw new SQLException("Failed to add a record into " + uri);
     }
 
+    /**
+     * Query the database
+     *
+     * @param uri The URI to query. This will be the full URI sent by the client;
+     *      if the client is requesting a specific record, the URI will end in a record number
+     *      that the implementation should parse and add to a WHERE or HAVING clause, specifying
+     *      that _id value.
+     * @param projection The list of columns to put into the cursor. If
+     *      {@code null} all columns are included.
+     * @param selection A selection criteria to apply when filtering rows.
+     *      If {@code null} then all rows are included.
+     * @param selectionArgs You may include ?s in selection, which will be replaced by
+     *      the values from selectionArgs, in order that they appear in the selection.
+     *      The values will be bound as Strings.
+     * @param sortOrder How the rows in the cursor should be sorted.
+     *      If {@code null} then the provider is free to define the sort order.
+     * @return a Cursor or {@code null}.
+     */
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -150,30 +140,6 @@ public class IrisContentProvider extends ContentProvider {
         switch (uriMatcher.match(uri)) {
             case MESSAGES:
                 qb.setProjectionMap(MESSAGES_PROJECTION_MAP);
-                break;
-
-            case _ID:
-                qb.appendWhere(ID + "=" + uri.getPathSegments().get(1));
-                break;
-
-            case MSG_ID:
-                qb.appendWhere(MESSAGE_ID + "=" + uri.getPathSegments().get(1));
-                break;
-
-            case MSG_HISTORYID:
-                qb.appendWhere(HISTORYID + "=" + uri.getPathSegments().get(1));
-                break;
-
-            case MSG_INTERNALDATE:
-                qb.appendWhere(INTERNALDATE + "=" + uri.getPathSegments().get(1));
-                break;
-
-            case MSG_DATE:
-                qb.appendWhere(DATE + "=" + uri.getPathSegments().get(1));
-                break;
-
-            case MSG_FROM:
-                qb.appendWhere(FROM + "=" + uri.getPathSegments().get(1));
                 break;
 
             default:
@@ -195,48 +161,19 @@ public class IrisContentProvider extends ContentProvider {
         return c;
     }
 
+    /**
+     * Delete row(s) from the database
+     * @param uri The full URI to query, including a row ID (if a specific record is requested).
+     * @param selection An optional restriction to apply to rows when deleting.
+     * @return The number of rows affected.
+     * @throws SQLException
+     */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
         int count = 0;
         switch (uriMatcher.match(uri)) {
             case MESSAGES:
                 count = db.delete(TABLE_NAME, selection, selectionArgs);
-                break;
-
-            case _ID:
-                String id = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, ID + " = " + id +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_ID:
-                String id2 = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, MESSAGE_ID + " = " + id2 +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_HISTORYID:
-                String hID = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, HISTORYID + " = " + hID +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_INTERNALDATE:
-                String intDate = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, INTERNALDATE + " = " + intDate +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_DATE:
-                String date = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, DATE + " = " + date +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_FROM:
-                String from = uri.getPathSegments().get(1);
-                count = db.delete(TABLE_NAME, FROM + " = " + from +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
                 break;
 
             default:
@@ -247,6 +184,15 @@ public class IrisContentProvider extends ContentProvider {
         return count;
     }
 
+    /**
+     * Update rows in the database
+     * @param uri The URI to query. This can potentially have a record ID if this
+     * is an update request for a specific record.
+     * @param values A set of column_name/value pairs to update in the database.
+     *     This must not be {@code null}.
+     * @param selection An optional filter to match rows to update.
+     * @return the number of rows affected.
+     */
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
         int count = 0;
@@ -256,36 +202,6 @@ public class IrisContentProvider extends ContentProvider {
                 count = db.update(TABLE_NAME, values, selection, selectionArgs);
                 break;
 
-            case _ID:
-                count = db.update(TABLE_NAME, values, ID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_ID:
-                count = db.update(TABLE_NAME, values, MESSAGE_ID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_HISTORYID:
-                count = db.update(TABLE_NAME, values, HISTORYID + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_INTERNALDATE:
-                count = db.update(TABLE_NAME, values, INTERNALDATE + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_DATE:
-                count = db.update(TABLE_NAME, values, DATE + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
-            case MSG_FROM:
-                count = db.update(TABLE_NAME, values, FROM + " = " + uri.getPathSegments().get(1) +
-                        (!TextUtils.isEmpty(selection) ? " AND (" + selection + ')' : ""), selectionArgs);
-                break;
-
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
@@ -293,6 +209,11 @@ public class IrisContentProvider extends ContentProvider {
         return count;
     }
 
+    /**
+     * Get MIME type for data
+     * @param uri the URI to query.
+     * @return a MIME type string, or {@code null} if there is no type.
+     */
     @Override
     public String getType(Uri uri) {
         switch (uriMatcher.match(uri)) {
@@ -301,17 +222,6 @@ public class IrisContentProvider extends ContentProvider {
              */
             case MESSAGES:
                 return "vnd.android.cursor.dir/vnd.iris.messages";
-
-            /**
-             * Get a particular message
-             */
-            case _ID:
-            case MSG_ID:
-            case MSG_HISTORYID:
-            case MSG_INTERNALDATE:
-            case MSG_DATE:
-            case MSG_FROM:
-                return "vnd.android.cursor.item/vnd.iris.messages";
 
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);

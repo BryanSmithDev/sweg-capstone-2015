@@ -1,60 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="72dp"
-    android:paddingRight="16dp"
-    android:paddingLeft="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    android:background="@drawable/email_list_item_selector"
     android:orientation="vertical"
-    android:background="@drawable/email_list_item_selector">
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp">
+
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="start"
         android:weightSum="14">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="Large Text"
-            android:id="@+id/fromTextView"
-            android:textColor="@color/primary_text"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:maxLines="1"
-            android:textSize="16sp"
-            style="@style/autoscroll"
-            android:layout_weight="5" />
 
         <TextView
-            android:gravity="end"
-            android:layout_gravity="end"
+            android:id="@+id/fromTextView"
+            style="@style/autoscroll"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Small Text"
-            android:id="@+id/dateTextView"
-            android:textColor="@color/secondary_text"
-            android:paddingTop="8dp"
+            android:layout_weight="5"
+            android:maxLines="1"
             android:paddingBottom="8dp"
-            android:textSize="12sp"
-            android:layout_weight="9"/>
+            android:paddingTop="8dp"
+            android:text="Large Text"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/primary_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/dateTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_weight="9"
+            android:gravity="end"
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp"
+            android:text="Small Text"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="@color/secondary_text"
+            android:textSize="12sp" />
     </TableRow>
+
     <TableRow
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="start"
         android:weightSum="10">
+
         <TextView
+            android:id="@+id/subjectTextview"
+            style="@style/autoscroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Small Text"
-            android:id="@+id/subjectTextview"
-            android:textColor="@color/secondary_text"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
             android:maxLines="1"
-            android:textSize="12sp"
-            style="@style/autoscroll"/>
+            android:paddingBottom="8dp"
+            android:paddingTop="8dp"
+            android:text="Small Text"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:textColor="@color/secondary_text"
+            android:textSize="12sp" />
 
     </TableRow>
 
