@@ -2,6 +2,7 @@ package edu.uvawise.iris;
 
 import android.Manifest;
 import android.accounts.AccountManager;
+import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
@@ -397,6 +398,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             case R.id.action_service:
                 Intent serviceIntent = new Intent(this, IrisVoiceService.class);
+
+                if (!hasDrawOverAppsPermission()) return false;
+
                 if (!IrisVoiceService.isRunning()) {
                     item.setIcon(android.R.drawable.ic_media_pause);
                     startService(serviceIntent);
@@ -414,11 +418,23 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
-    private boolean hasPermission() {
+    private boolean hasDrawOverAppsPermission(){
+        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_DENIED;
+        if (result) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.SYSTEM_ALERT_WINDOW},
+                    0);
+        } else {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean hasGetAccountsPermission() {
         boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_DENIED;
         if (result) {
             ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_CONTACTS},
+                    new String[]{Manifest.permission.GET_ACCOUNTS},
                     0);
         } else {
             return true;
@@ -433,7 +449,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * user can pick an account.
      */
     private void refreshResults() {
-        if (hasPermission()) {
+        if (hasGetAccountsPermission()) {
 
             if (credential.getSelectedAccountName() == null) {
                 chooseAccount();
@@ -449,7 +465,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * Perform manual sync
      */
     private void forceSync() {
-        if (hasPermission()) {
+        if (hasGetAccountsPermission()) {
             if (credential.getSelectedAccountName() == null) {
                 chooseAccount();
             } else {
