@@ -25,6 +25,7 @@ import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SimpleCursorAdapter;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.menu.ActionMenuItemView;
@@ -34,7 +35,9 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.AbsListView;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -338,6 +341,35 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             }
         });
+
+        final String[] listItems = {"Account 1", "Account 2"};
+        // Adapter
+        SpinnerAdapter adapter =
+                new ArrayAdapter<>(this,
+                        android.R.layout.simple_spinner_dropdown_item,listItems);
+
+        // Callback
+        ActionBar.OnNavigationListener callback = new ActionBar.OnNavigationListener() {
+
+
+            @Override
+            public boolean onNavigationItemSelected(int position, long id) {
+
+                // Do stuff when navigation item is selected
+
+                Log.d("NavigationItemSelected", listItems[position]); // Debug
+
+                return true;
+
+            }
+
+        };
+
+        // Action Bar
+        ActionBar actions = getSupportActionBar();
+        actions.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
+        actions.setDisplayShowTitleEnabled(false);
+        actions.setListNavigationCallbacks(adapter, callback);
 
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
