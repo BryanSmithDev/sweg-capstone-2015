@@ -25,6 +25,7 @@ public class IrisContentProvider extends ContentProvider {
 
     //Column Names
     public static final String ID = "_id";
+    public static final String USER_ID = "usr_id";
     public static final String MESSAGE_ID = "msg_id";
     public static final String SNIPPET = "snippet";
     public static final String HISTORYID = "historyId";
@@ -45,10 +46,11 @@ public class IrisContentProvider extends ContentProvider {
     static final UriMatcher uriMatcher;
     static final String DATABASE_NAME = "Gmail";
     static final String TABLE_NAME = "gmailMessages";
-    static final int DATABASE_VERSION = 9;
+    static final int DATABASE_VERSION = 10;
     static final String CREATE_DB_TABLE =
             " CREATE TABLE " + TABLE_NAME + "(" +
                     " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
+                    " " + USER_ID + "           VARCHAR(128) NOT NULL," +
                     " " + MESSAGE_ID + "           VARCHAR(32) NOT NULL," +
                     " " + SNIPPET + "      VARCHAR(128)," +
                     " " + HISTORYID + "    VARCHAR(32)  NOT NULL," +
