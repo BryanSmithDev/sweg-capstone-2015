@@ -35,20 +35,25 @@ public class IrisContentProvider extends ContentProvider {
     public static final String FROM = "_from";
     public static final String BODY = "body";
     public static final String ISREAD = "isRead";
+    public static final String CURR_HIST_ID = "currHistID";
 
     //URI Column numbers
     static final int MESSAGES = 1;
+    static final int ACCOUNTS = 2;
     static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
-    static final String URL = "content://" + PROVIDER_NAME + "/messages";
-    public static final Uri MESSAGES_URI = Uri.parse(URL);
+    static final String MSG_URL = "content://" + PROVIDER_NAME + "/messages";
+    static final String ACC_URL = "content://" + PROVIDER_NAME + "/accounts";
+    public static final Uri MESSAGES_URI = Uri.parse(MSG_URL);
+    public static final Uri ACCOUNT_URI = Uri.parse(ACC_URL);
 
     //Database info
     static final UriMatcher uriMatcher;
     static final String DATABASE_NAME = "Gmail";
-    static final String TABLE_NAME = "gmailMessages";
+    static final String MSG_TABLE_NAME = "gmailMessages";
+    static final String ACC_TABLE_NAME = "gmailAccounts";
     static final int DATABASE_VERSION = 10;
-    static final String CREATE_DB_TABLE =
-            " CREATE TABLE " + TABLE_NAME + "(" +
+    static final String CREATE_MSG_DB_TABLE =
+            " CREATE TABLE " + MSG_TABLE_NAME + "(" +
                     " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
                     " " + USER_ID + "           VARCHAR(128) NOT NULL," +
                     " " + MESSAGE_ID + "           VARCHAR(32) NOT NULL," +
@@ -61,11 +66,19 @@ public class IrisContentProvider extends ContentProvider {
                     " " + BODY + "         VARCHAR(1024)," +
                     " " + ISREAD + "         BOOLEAN);";
 
+    static final String CREATE_ACC_DB_TABLE =
+            " CREATE TABLE " + ACC_TABLE_NAME + "(" +
+                    " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
+                    " " + USER_ID + "           VARCHAR(128) NOT NULL," +
+                    " " + CURR_HIST_ID + "           VARCHAR(32) NOT NULL,";
+
     static HashMap<String, String> MESSAGES_PROJECTION_MAP;
+    static HashMap<String, String> ACCOUNTS_PROJECTION_MAP;
 
     static {
         uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
         uriMatcher.addURI(PROVIDER_NAME, "messages", MESSAGES);
+        uriMatcher.addURI(PROVIDER_NAME, "accounts", ACCOUNTS);
     }
 
     /**
@@ -99,12 +112,23 @@ public class IrisContentProvider extends ContentProvider {
     @Override
     public Uri insert(@NonNull Uri uri, ContentValues values) {
 
+        String tableName = "";
+        switch (uriMatcher.match(uri)) {
+            case MESSAGES:
+                tableName = MSG_TABLE_NAME;
+                break;
+            case ACCOUNTS:
+                tableName = ACC_TABLE_NAME;
+                break;
+
+            default:
+                throw new IllegalArgumentException("Unknown URI " + uri);
+        }
+
         /**
          * Add a new record
          */
-        long rowID = db.insertWithOnConflict(TABLE_NAME, "", values, SQLiteDatabase.CONFLICT_REPLACE);
-
-
+        long rowID = db.insertWithOnConflict(tableName, "", values, SQLiteDatabase.CONFLICT_REPLACE);
         /**
          * If record is added successfully
          */
@@ -114,6 +138,7 @@ public class IrisContentProvider extends ContentProvider {
             return _uri;
         }
         throw new SQLException("Failed to add a record into " + uri);
+
     }
 
     /**
@@ -137,23 +162,25 @@ public class IrisContentProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
-        qb.setTables(TABLE_NAME);
+
 
         switch (uriMatcher.match(uri)) {
             case MESSAGES:
+                qb.setTables(MSG_TABLE_NAME);
                 qb.setProjectionMap(MESSAGES_PROJECTION_MAP);
+                if (sortOrder == null || sortOrder == "") {
+                    sortOrder = INTERNALDATE + " DESC";
+                }
+                break;
+            case ACCOUNTS:
+                qb.setTables(ACC_TABLE_NAME);
+                qb.setProjectionMap(ACCOUNTS_PROJECTION_MAP);
                 break;
 
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
-        if (sortOrder == null || sortOrder == "") {
-            /**
-             * By default sort on date
-             */
-            sortOrder = INTERNALDATE + " DESC";
-        }
         Cursor c = qb.query(db, projection, selection, selectionArgs, null, null, sortOrder);
 
         /**
@@ -175,7 +202,10 @@ public class IrisContentProvider extends ContentProvider {
         int count = 0;
         switch (uriMatcher.match(uri)) {
             case MESSAGES:
-                count = db.delete(TABLE_NAME, selection, selectionArgs);
+                count = db.delete(MSG_TABLE_NAME, selection, selectionArgs);
+                break;
+            case ACCOUNTS:
+                count = db.delete(ACC_TABLE_NAME, selection, selectionArgs);
                 break;
 
             default:
@@ -201,9 +231,11 @@ public class IrisContentProvider extends ContentProvider {
 
         switch (uriMatcher.match(uri)) {
             case MESSAGES:
-                count = db.update(TABLE_NAME, values, selection, selectionArgs);
+                count = db.update(MSG_TABLE_NAME, values, selection, selectionArgs);
                 break;
-
+            case ACCOUNTS:
+                count = db.update(ACC_TABLE_NAME, values, selection, selectionArgs);
+                break;
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
@@ -219,11 +251,10 @@ public class IrisContentProvider extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         switch (uriMatcher.match(uri)) {
-            /**
-             * Get all message records
-             */
             case MESSAGES:
                 return "vnd.android.cursor.dir/vnd.iris.messages";
+            case ACCOUNTS:
+                return "vnd.android.cursor.dir/vnd.iris.accounts";
 
             default:
                 throw new IllegalArgumentException("Unsupported URI: " + uri);
@@ -241,7 +272,8 @@ public class IrisContentProvider extends ContentProvider {
 
         @Override
         public void onCreate(SQLiteDatabase db) {
-            db.execSQL(CREATE_DB_TABLE);
+            db.execSQL(CREATE_MSG_DB_TABLE);
+            db.execSQL(CREATE_ACC_DB_TABLE);
         }
 
         @Override
@@ -250,7 +282,8 @@ public class IrisContentProvider extends ContentProvider {
         }
 
         public void dropDB(SQLiteDatabase db) {
-            db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + MSG_TABLE_NAME);
+            db.execSQL("DROP TABLE IF EXISTS " + ACC_TABLE_NAME);
             onCreate(db);
         }
     }
