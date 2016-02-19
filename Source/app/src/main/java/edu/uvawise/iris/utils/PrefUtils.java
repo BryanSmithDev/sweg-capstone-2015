@@ -20,6 +20,11 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import com.google.common.collect.Sets;
+
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Handle the Shared Preferences of the application
  */
@@ -192,6 +197,63 @@ public class PrefUtils {
                 PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(getKey(context, keyId), value);
+        editor.commit();
+    }
+
+    /**
+     * Gets a string set preference value.
+     *
+     * @param context the context
+     * @param keyId the key id
+     */
+    public static String[] getStringSet(Context context, int keyId) {
+        return getStringSet(context, keyId, new String[]{""});
+    }
+
+    /**
+     * Gets a string preference value.
+     *
+     * @param context the context
+     * @param keyId the key id
+     * @param defaultValue default value
+     */
+    public static String[] getStringSet(Context context, int keyId, String[] defaultValue) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(
+                PREFS_NAME, Context.MODE_PRIVATE);
+        HashSet<String> defValues = Sets.newHashSet(defaultValue);
+        return (String[])(sharedPreferences.getStringSet(getKey(context, keyId), defValues).toArray());
+    }
+
+    /**
+     * Sets a string set preference value.
+     *
+     * @param context the context
+     * @param keyId the key id
+     * @param value the set value
+     */
+    @SuppressLint("CommitPrefEdits")
+    public static void setStringSet(Context context, int keyId, Set<String> value) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(
+                PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putStringSet(getKey(context, keyId), value);
+        editor.commit();
+    }
+
+    /**
+     * Sets a string set preference value.
+     *
+     * @param context the context
+     * @param keyId the key id
+     * @param value the values
+     */
+    @SuppressLint("CommitPrefEdits")
+    public static void setStringSet(Context context, int keyId, String[] value) {
+        SharedPreferences sharedPreferences = context.getSharedPreferences(
+                PREFS_NAME, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        HashSet<String> set = Sets.newHashSet(value);
+        editor.putStringSet(getKey(context, keyId), set);
         editor.commit();
     }
 
