@@ -168,7 +168,7 @@ public abstract class GmailUtils {
     }
 
     /**
-     * Get the currently logged in Google Account Name.
+     * Get the currently selected in Google Account Name.
      * @param context the context
      * @return The name of the Google account logged in. Or the defaultValue specified if none.
      */
@@ -179,7 +179,7 @@ public abstract class GmailUtils {
     }
 
     /**
-     * Sets the currently logged in Google Account Name.
+     * Sets the currently selected in Google Account Name.
      * @param context the context
      */
     public static void setGmailAccountName(Context context, String name){
