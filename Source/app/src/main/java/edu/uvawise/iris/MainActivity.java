@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.content.ContentProviderOperation;
 import android.content.ContentProviderResult;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -15,7 +16,6 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v4.app.ActivityCompat;
@@ -35,9 +35,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.AbsListView;
-import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.SpinnerAdapter;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -70,11 +68,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     private static final String TAG = MainActivity.class.getSimpleName(); //Log tag for this class
 
 
-    String mCurFilter; // If non-null, this is the current filter the user has provided.
+    static final int MESSAGES_LOADER_ID = 0;
+    static final int ACCOUNT_LOADER_ID = 1;
     GoogleAccountCredential credential; //Our Google(Gmail) account credential
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
     ListView mListView;     //Our email list
-    SimpleCursorAdapter mAdapter; //The adapter to manage data in our email list.
+    SimpleCursorAdapter mEmailListAdapter; //The adapter to manage data in our email list.
+    SimpleCursorAdapter mAccountsAdapter; //The adapter to manage data in our email list.
 
     /**
      * Called when a new intent is passed to the activity.
@@ -188,13 +188,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //Setup our Email List
         mListView = (ListView) findViewById(R.id.emailList);
         //Our cursor adapter to load data into the list and handle changes.
-        mAdapter = new SimpleCursorAdapter(this,
+        mEmailListAdapter = new SimpleCursorAdapter(this,
                 R.layout.list_email_item, null,
                 new String[]{IrisContentProvider.SUBJECT,
                         IrisContentProvider.FROM,
                         IrisContentProvider.DATE},
                 new int[]{R.id.subjectTextview, R.id.fromTextView, R.id.dateTextView}, 0);
-        mListView.setAdapter(mAdapter); //Set the list to use the adapter above
+        mListView.setAdapter(mEmailListAdapter); //Set the list to use the adapter above
         mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL); //Allow multiple lines to be selected.
         mListView.setEmptyView(findViewById(R.id.empty_list_item)); //This view will be shown when the list is empty
 
@@ -343,10 +343,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
 
         final String[] listItems = {"Account 1", "Account 2"};
-        // Adapter
-        SpinnerAdapter adapter =
-                new ArrayAdapter<>(this,
-                        android.R.layout.simple_spinner_dropdown_item,listItems);
+
+        mAccountsAdapter = new SimpleCursorAdapter(this,
+                android.R.layout.simple_dropdown_item_1line, null,
+                new String[]{IrisContentProvider.USER_ID},
+                new int[]{android.R.id.text1}, 0);
 
         // Callback
         ActionBar.OnNavigationListener callback = new ActionBar.OnNavigationListener() {
@@ -369,11 +370,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         ActionBar actions = getSupportActionBar();
         actions.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
         actions.setDisplayShowTitleEnabled(false);
-        actions.setListNavigationCallbacks(adapter, callback);
+        actions.setListNavigationCallbacks(mAccountsAdapter, callback);
 
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
-        getSupportLoaderManager().initLoader(0, null, this);
+        getSupportLoaderManager().initLoader(MESSAGES_LOADER_ID, null, this);
+        getSupportLoaderManager().initLoader(ACCOUNT_LOADER_ID,null,this);
     }
 
     /**
@@ -436,6 +438,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         credential.setSelectedAccountName(accountName);
                         GmailUtils.setGmailAccountName(this,accountName);
                         SyncUtils.enableSync(this);
+                        ContentValues values = new ContentValues();
+                        values.put(IrisContentProvider.USER_ID,accountName);
+                        values.put(IrisContentProvider.CURR_HIST_ID,"0");
+                        getContentResolver().insert(IrisContentProvider.ACCOUNT_URI,values);
+                        getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID,null,this);
                     }
                 } else if (resultCode == RESULT_CANCELED) {
                     Toast.makeText(this, R.string.error_no_account_chosen, Toast.LENGTH_LONG).show();
@@ -667,29 +674,33 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      */
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        // This is called when a new Loader needs to be created.  This
-        // sample only has one Loader, so we don't care about the MESSAGE_ID.
-        // First, pick the base URI to use depending on whether we are
-        // currently filtering.
-        Uri baseUri;
-        if (mCurFilter != null) {
-            baseUri = Uri.withAppendedPath(IrisContentProvider.MESSAGES_URI,
-                    Uri.encode(mCurFilter));
-        } else {
-            baseUri = IrisContentProvider.MESSAGES_URI;
-        }
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mSwipeRefreshLayout.setRefreshing(true);
-            }
-        });
+        // This is called when a new Loader needs to be created.
+        switch (id) {
+            case MESSAGES_LOADER_ID:
+                Log.d(TAG,"Created message loader");
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mSwipeRefreshLayout.setRefreshing(true);
+                    }
+                });
 
-        // Now create and return a CursorLoader that will take care of
-        // creating a Cursor for the data being displayed.
-        return new CursorLoader(this, baseUri,
-                new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
-                null);
+                // Now create and return a CursorLoader that will take care of
+                // creating a Cursor for the data being displayed.
+                return new CursorLoader(this, IrisContentProvider.MESSAGES_URI,
+                        new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
+                        null);
+            case ACCOUNT_LOADER_ID:
+                Log.d(TAG,"Created account loader");
+                return new CursorLoader(this, IrisContentProvider.ACCOUNT_URI,
+                        new String[]{"_id", IrisContentProvider.USER_ID, IrisContentProvider.USER_TOKEN, IrisContentProvider.CURR_HIST_ID}, null, null,
+                        null);
+            default:
+                // An invalid id was passed in
+                return null;
+        }
+
+
     }
 
     /**
@@ -701,13 +712,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         // Swap the new cursor in.  (The framework will take care of closing the
         // old cursor once we return.)
-        mAdapter.swapCursor(data);
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mSwipeRefreshLayout.setRefreshing(false);
-            }
-        });
+        switch (loader.getId()) {
+            case MESSAGES_LOADER_ID:
+                mEmailListAdapter.swapCursor(data);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mSwipeRefreshLayout.setRefreshing(false);
+                    }
+                });
+                break;
+            case ACCOUNT_LOADER_ID:
+                mAccountsAdapter.swapCursor(data);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mSwipeRefreshLayout.setRefreshing(false);
+                    }
+                });
+                break;
+        }
     }
 
     /**
@@ -717,7 +741,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
         //We need to make sure we are no longer using the loaders data in our adapter.
-        mAdapter.swapCursor(null);
+        switch (loader.getId()) {
+            case MESSAGES_LOADER_ID:
+                mEmailListAdapter.swapCursor(null);
+                break;
+            case ACCOUNT_LOADER_ID:
+                mAccountsAdapter.swapCursor(null);
+                break;
+        }
     }
 
 }
