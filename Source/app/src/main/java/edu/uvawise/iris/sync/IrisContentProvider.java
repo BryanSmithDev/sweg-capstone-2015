@@ -36,10 +36,11 @@ public class IrisContentProvider extends ContentProvider {
     public static final String BODY = "body";
     public static final String ISREAD = "isRead";
     public static final String CURR_HIST_ID = "currHistID";
+    public static final String USER_TOKEN = "userToken";
 
     //URI Column numbers
-    static final int MESSAGES = 1;
-    static final int ACCOUNTS = 2;
+    static final int MESSAGES = 0;
+    static final int ACCOUNTS = 1;
     static final String PROVIDER_NAME = "edu.uvawise.iris.sync";
     static final String MSG_URL = "content://" + PROVIDER_NAME + "/messages";
     static final String ACC_URL = "content://" + PROVIDER_NAME + "/accounts";
@@ -51,11 +52,11 @@ public class IrisContentProvider extends ContentProvider {
     static final String DATABASE_NAME = "Gmail";
     static final String MSG_TABLE_NAME = "gmailMessages";
     static final String ACC_TABLE_NAME = "gmailAccounts";
-    static final int DATABASE_VERSION = 10;
+    static final int DATABASE_VERSION = 14;
     static final String CREATE_MSG_DB_TABLE =
             " CREATE TABLE " + MSG_TABLE_NAME + "(" +
                     " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
-                    " " + USER_ID + "           VARCHAR(128) NOT NULL," +
+                    " " + USER_ID + "           VARCHAR(128)," +
                     " " + MESSAGE_ID + "           VARCHAR(32) NOT NULL," +
                     " " + SNIPPET + "      VARCHAR(128)," +
                     " " + HISTORYID + "    VARCHAR(32)  NOT NULL," +
@@ -70,7 +71,8 @@ public class IrisContentProvider extends ContentProvider {
             " CREATE TABLE " + ACC_TABLE_NAME + "(" +
                     " " + ID + "           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT," +
                     " " + USER_ID + "           VARCHAR(128) NOT NULL," +
-                    " " + CURR_HIST_ID + "           VARCHAR(32) NOT NULL,";
+                    " " + USER_TOKEN + "           VARCHAR(128)," +
+                    " " + CURR_HIST_ID + "           VARCHAR(32) NOT NULL);";
 
     static HashMap<String, String> MESSAGES_PROJECTION_MAP;
     static HashMap<String, String> ACCOUNTS_PROJECTION_MAP;
