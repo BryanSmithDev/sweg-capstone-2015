@@ -13,6 +13,7 @@
     <string name="pref_sync_freq_title">Sync Frequency</string>
     <string name="pref_sync_freq_summary">How often do you want to sync data?</string>
     <string name="pref_key_gmail_account_name">GoogleAccount</string>
+    <string name="pref_key_gmail_accounts">SignedInGmailAccounts</string>
     <string name="pref_key_gmail_history_id">GmailHistoryID</string>
     <string name="pref_key_gmail_syncing">GmailSyncing</string>
     <string name="action_delete">Delete</string>

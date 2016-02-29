@@ -2,8 +2,10 @@ package edu.uvawise.iris.utils;
 
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.Toast;
@@ -18,12 +20,15 @@ import com.google.api.services.gmail.model.ModifyMessageRequest;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import edu.uvawise.iris.R;
+import edu.uvawise.iris.sync.GmailAccount;
+import edu.uvawise.iris.sync.IrisContentProvider;
 
 /**
  * Collection of Gmail Helper Methods. Simplifies reuse of GMail API Tasks.
@@ -135,7 +140,7 @@ public abstract class GmailUtils {
     public static GoogleAccountCredential getGoogleAccountCredential(
             Context context, String accountName, List<String> scope) throws IOException, GoogleAuthException {
         GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, scope);
-        if (!accountName.equals("")) credential.setSelectedAccountName(accountName);
+        credential.setSelectedAccountName(accountName);
         credential.getToken();
         return credential;
     }
@@ -158,74 +163,14 @@ public abstract class GmailUtils {
         PrefUtils.setBoolean(context,R.string.pref_key_gmail_syncing,value);
     }
 
-    /**
-     * Get the currently logged in Google Account Name.
-     * @param context the context
-     * @return The name of the Google account logged in. Or an empty string if none.
-     */
-    public static String getGmailAccountName(Context context) {
-        return getGmailAccountName(context,"");
-    }
-
-    /**
-     * Get the currently selected in Google Account Name.
-     * @param context the context
-     * @return The name of the Google account logged in. Or the defaultValue specified if none.
-     */
-    public static String getGmailAccountName(Context context, String defaultValue) {
-        String account = PrefUtils.getString(context,R.string.pref_key_gmail_account_name,defaultValue);
-        if (account == null || account.equals("")) Log.w(TAG, "Saved account name is null");
-        return account;
-    }
-
-    /**
-     * Sets the currently selected in Google Account Name.
-     * @param context the context
-     */
-    public static void setGmailAccountName(Context context, String name){
-        PrefUtils.setString(context,R.string.pref_key_gmail_account_name,name);
-    }
-
-    /**
-     * Get the current saved history ID
-     * @param context the context
-     * @return BigInteger history ID or null if none.
-     */
-    public static BigInteger getCurrentHistoryID(Context context) {
-        String histString = PrefUtils.getString(context,R.string.pref_key_gmail_history_id,null);
-        BigInteger histID = null;
-        if (histString != null) {
-            histID = new BigInteger(histString);
-        }
-        return histID;
-    }
-
-    /**
-     * Sets the current history ID into the shared preference
-     * @param context the context
-     * @param histID The BigInteger history ID to save
-     */
-    public static void setCurrentHistoryID(Context context, BigInteger histID) {
-        setCurrentHistoryID(context, histID.toString());
-    }
-
-    /**
-     * Sets the current history ID into the shared preference
-     * @param context the context
-     * @param histID The String history ID to save
-     */
-    public static void setCurrentHistoryID(Context context, String histID) {
-        PrefUtils.setString(context, R.string.pref_key_gmail_history_id ,histID);
-        Log.i(TAG, "Setting HistoryID: " + histID);
-    }
 
     /**
      * Archives a group of Gmail messages
      * @param context the context
      * @param IDs The list of IDs to archive
      */
-    public static void archiveMessages(final Context context, final Collection<String> IDs) {
-        removeLabelFromMessages(context, IDs, "INBOX");
+    public static void archiveMessages(final Context context, final String userID, final Collection<String> IDs) {
+        removeLabelFromMessages(context, userID, IDs, "INBOX");
     }
 
     /**
@@ -233,8 +178,8 @@ public abstract class GmailUtils {
      * @param context the context
      * @param ID The ID of the message to archive
      */
-    public static void archiveMessage(final Context context, final String ID) {
-        archiveMessages(context, Collections.singletonList(ID));
+    public static void archiveMessage(final Context context, final String userID, final String ID) {
+        archiveMessages(context, userID, Collections.singletonList(ID));
     }
 
     /**
@@ -242,7 +187,7 @@ public abstract class GmailUtils {
      * @param context the context
      * @param IDs The list of IDs to delete
      */
-    public static void deleteMessages(final Context context, final Collection<String> IDs) {
+    public static void deleteMessages(final Context context, final String userID, final Collection<String> IDs) {
         if (IDs.size() < 1) return;
         new Thread(new Runnable() {
             public void run() {
@@ -250,15 +195,17 @@ public abstract class GmailUtils {
                 GoogleAccountCredential credential = null;
                 BigInteger histID;
                 try {
-                    credential = GmailUtils.getGmailAccountCredential(context, GmailUtils.getGmailAccountName(context));
+                    credential = GmailUtils.getGmailAccountCredential(context, userID);
 
                     final Gmail gmail = GmailUtils.getGmailService(credential);
                     for (String id : IDs) {
                         Log.d(TAG, "Deleting from server: " + id);
-                        gmail.users().messages().trash(GmailUtils.getGmailAccountName(context), id).execute();
+                        gmail.users().messages().trash(userID, id).execute();
                     }
-                    histID = gmail.users().getProfile(GmailUtils.getGmailAccountName(context)).execute().getHistoryId();
-                    if (histID != null) setCurrentHistoryID(context, histID);
+                    histID = gmail.users().getProfile(userID).execute().getHistoryId();
+                    if (histID != null) {
+                        setCurrentHistoryID(context, userID, histID);
+                    }
                 } catch (IOException | GoogleAuthException e) {
                     AndroidUtils.runOnUiThread(context, new Runnable() {
                         @Override
@@ -278,8 +225,8 @@ public abstract class GmailUtils {
      * @param context The context
      * @param ID The ID of the message to delete
      */
-    public static void deleteMessage(final Context context, final String ID) {
-        deleteMessages(context, Collections.singletonList(ID));
+    public static void deleteMessage(final Context context,final String userID, final String ID) {
+        deleteMessages(context, userID, Collections.singletonList(ID));
     }
 
     /**
@@ -288,7 +235,7 @@ public abstract class GmailUtils {
      * @param IDs The list of IDs to remove the label from
      * @param label The label to remove
      */
-    public static void removeLabelFromMessages(final Context context, final Collection<String> IDs, final String label) {
+    public static void removeLabelFromMessages(final Context context, final String userID, final Collection<String> IDs, final String label) {
         if (IDs.size() < 1) return;
         new Thread(new Runnable() {
             public void run() {
@@ -296,17 +243,19 @@ public abstract class GmailUtils {
                 GoogleAccountCredential credential = null;
                 BigInteger histID;
                 try {
-                    credential = getGmailAccountCredential(context, getGmailAccountName(context));
+                    credential = getGmailAccountCredential(context, userID);
 
                     final Gmail gmail = GmailUtils.getGmailService(credential);
                     for (String id : IDs) {
                         Log.d(TAG, "Removing label " + label + " from " + id);
                         ModifyMessageRequest request = new ModifyMessageRequest();
                         request.setRemoveLabelIds(Collections.singletonList(label));
-                        gmail.users().messages().modify(GmailUtils.getGmailAccountName(context), id, request).execute();
+                        gmail.users().messages().modify(userID, id, request).execute();
                     }
-                    histID = gmail.users().getProfile(GmailUtils.getGmailAccountName(context)).execute().getHistoryId();
-                    if (histID != null) setCurrentHistoryID(context, histID);
+                    histID = gmail.users().getProfile(userID).execute().getHistoryId();
+                    if (histID != null) {
+                        setCurrentHistoryID(context, userID,  histID);
+                    }
                 } catch (IOException | GoogleAuthException e) {
                     AndroidUtils.runOnUiThread(context, new Runnable() {
                         @Override
@@ -321,14 +270,54 @@ public abstract class GmailUtils {
         }).start();
     }
 
+    public static BigInteger getCurrentHistoryID(Context context, String userID) {
+        Cursor histCursor = context.getContentResolver().query(IrisContentProvider.ACCOUNT_URI,
+                new String[]{IrisContentProvider.CURR_HIST_ID},
+                IrisContentProvider.USER_ID + " = ?",
+                new String[]{userID},
+                null);
+        histCursor.moveToFirst();
+        BigInteger result = new BigInteger(histCursor.getString(0));
+        histCursor.close();
+        return result;
+
+    }
+
+    public static ArrayList<GmailAccount> getGmailAccounts(Context context){
+
+        Cursor accCursor = context.getContentResolver().query(IrisContentProvider.ACCOUNT_URI,null,null,null,null);
+        ArrayList<GmailAccount> accounts = new ArrayList<>();
+        accCursor.moveToFirst();
+
+        int i =0;
+        while (!accCursor.isAfterLast()) {
+            GmailAccount temp = new GmailAccount(accCursor.getString(1),accCursor.getString(3));
+            accounts.add(temp);
+            Log.d(TAG,"GetGmailAccounts: "+i+"  -  "+temp.getUserID());
+            accCursor.moveToNext();
+            i++;
+        }
+        accCursor.close();
+
+        return accounts;
+    }
+
+    public static void setCurrentHistoryID(Context context, String userID, BigInteger histID) {
+        if (histID==null) return;
+        ContentValues values = new ContentValues();
+        values.put(IrisContentProvider.CURR_HIST_ID, histID.toString());
+        int result = context.getContentResolver().update(IrisContentProvider.ACCOUNT_URI,values,IrisContentProvider.USER_ID + " = '"+userID+"'",null);
+        if (result >=1) Log.i(TAG,"Set "+userID+"'s history ID to "+ histID);
+    }
+
     /**
      * Remove a label from a Gmail Message
      * @param context The context
      * @param ID The ID of the message to remove the label from
      * @param label The label to remove.
      */
-    public static void removeLabelFromMessage(final Context context, final String ID, final String label) {
-        removeLabelFromMessages(context, Collections.singletonList(ID), label);
+    public static void removeLabelFromMessage(final Context context,final String userID, final String ID, final String label) {
+        removeLabelFromMessages(context, userID, Collections.singletonList(ID), label);
     }
 
 }

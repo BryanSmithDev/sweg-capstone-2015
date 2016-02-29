@@ -1,6 +1,7 @@
 package edu.uvawise.iris;
 
 import android.Manifest;
+import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.content.ContentProviderOperation;
@@ -160,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         //Setup an initial Google account.
         credential = GmailUtils.getInitialGmailAccountCredential(this)
                 .setSelectedAccountName(
-                        GmailUtils.getGmailAccountName(this,null));
+                        null);
 
         //Check to see if the user wants us to keep their screen on while the app is running.
         enforceScreenOnFlag();
@@ -175,7 +176,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Log.d(TAG, "Sync Frequency Changed");
                     if (SyncUtils.isSyncEnabled(getContext())) {
                         Log.d(TAG, "Sync Frequency was enabled. Re-enabling to use new freq");
-                        SyncUtils.enableSync(getContext());
+                        //SyncUtils.enableSync(getContext());
                     } else {
                         Log.d(TAG, "Sync wasn't enabled. No need to re-enable.");
                     }
@@ -258,10 +259,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 switch (item.getItemId()) {
 
                     case R.id.action_delete:
-                        GmailUtils.deleteMessages(getContext(), gatherSelections());
+                        //GmailUtils.deleteMessages(getContext(), gatherSelections());
                         return true;
                     case R.id.action_archive:
-                        GmailUtils.archiveMessages(getContext(), gatherSelections());
+                        //GmailUtils.archiveMessages(getContext(), gatherSelections());
                         return true;
                     default:
                         return false;
@@ -436,13 +437,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     if (accountName != null) {
                         Log.d(TAG, "Account Picked - " + accountName);
                         credential.setSelectedAccountName(accountName);
-                        GmailUtils.setGmailAccountName(this,accountName);
-                        SyncUtils.enableSync(this);
                         ContentValues values = new ContentValues();
                         values.put(IrisContentProvider.USER_ID,accountName);
                         values.put(IrisContentProvider.CURR_HIST_ID,"0");
                         getContentResolver().insert(IrisContentProvider.ACCOUNT_URI,values);
                         getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID,null,this);
+                        SyncUtils.enableSyncForAccount(this, new Account(accountName, SyncUtils.ACCOUNT_TYPE));
                     }
                 } else if (resultCode == RESULT_CANCELED) {
                     Toast.makeText(this, R.string.error_no_account_chosen, Toast.LENGTH_LONG).show();

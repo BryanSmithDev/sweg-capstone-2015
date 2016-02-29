@@ -124,61 +124,66 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Log.i(TAG, "Beginning synchronization");
 
 
-        if (!GmailUtils.isSyncing(context)) {
-            Log.d(TAG, "Syncing is turned off.");
-            return;
-        }
+       // if (!GmailUtils.isSyncing(context)) {
+      //      Log.d(TAG, "Syncing is turned off.");
+       //     return;
+       // }
 
         if (account == null) {
             Log.d(TAG, "Passed Account is null");
             return;
         }
 
-        String googleAccount = GmailUtils.getGmailAccountName(context);
-        if (googleAccount.equals("")) {
-            Log.d(TAG, "Saved account name is null");
+        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
+
+        if (accounts.isEmpty()){
+            Log.e(TAG,"Can't sync. No accounts.");
             return;
         }
 
-        if (!googleAccount.equals(account.name)) {
-            Log.d(TAG, "Account name different");
-            return;
-        }
 
-        try {
-            GoogleAccountCredential credential = GmailUtils.getGmailAccountCredential(context, account.name);
-            if (credential == null) {
-                Log.d(TAG, "Credential Null");
-                return;
-            }
-
-            if (gmail == null) {
-                gmail = GmailUtils.getGmailService(credential);
-            }
-            Log.d(TAG, "Sync Running");
-
+        GoogleAccountCredential credential;
+        for (GmailAccount gmailAccount : accounts) {
+            Log.d(TAG, ""+gmailAccount.getUserID() );
             try {
-                if (canPartialSync(credential)) {
-                    performPartialSync(credential);
-                } else {
-                    performFullSync(credential);
+                credential = GmailUtils.getGmailAccountCredential(context, gmailAccount.getUserID());
+                if (credential == null) {
+                    Log.d(TAG, "Credential Null");
+                    return;
                 }
-            } catch (MessagingException | SocketTimeoutException e) {
-                Log.e(TAG, "Error Syncing");
+
+                if (gmail == null) {
+                    gmail = GmailUtils.getGmailService(credential);
+                }
+                Log.d(TAG, "Sync Running for:" + gmailAccount.getUserID());
+                Log.d(TAG, "Cred Name:" + credential.getSelectedAccountName());
+
+                try {
+                    if (canPartialSync(credential)) {
+                        performPartialSync(credential);
+                    } else {
+                        performFullSync(credential);
+                    }
+                } catch (MessagingException | SocketTimeoutException e) {
+                    Log.e(TAG, "Error Syncing");
+                }
+
+
+            } catch (UserRecoverableAuthException e) {
+                GmailUtils.permissionNotification(context, e.getIntent(), gmailAccount.getUserID());
+            } catch (GoogleAuthException e) {
+                Log.e(TAG, "GoogleAuthException", e);
+            } catch (UserRecoverableAuthIOException e) {
+                GmailUtils.permissionNotification(context, e.getIntent(), gmailAccount.getUserID());
+            } catch (IOException e) {
+                Log.e(TAG, "IOException", e);
+                syncResult.databaseError = true;
+            } finally {
+                credential = null;
             }
-
-
-        } catch (UserRecoverableAuthException e) {
-            GmailUtils.permissionNotification(context, e.getIntent(), account.name);
-        } catch (GoogleAuthException e) {
-            Log.e(TAG, "GoogleAuthException", e);
-        } catch (UserRecoverableAuthIOException e) {
-            GmailUtils.permissionNotification(context, e.getIntent(), account.name);
-        } catch (IOException e) {
-            Log.e(TAG, "IOException", e);
-            syncResult.databaseError = true;
+            Log.i(TAG, "Synchronization complete for:"+gmailAccount.getUserID());
         }
-        Log.i(TAG, "Synchronization complete");
+
     }
 
     /**
@@ -191,10 +196,11 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private void performFullSync(GoogleAccountCredential credential) throws MessagingException, IOException {
         Log.i(TAG, "Performing Full Sync");
         final ContentResolver contentResolver = context.getContentResolver();
+        String userID = credential.getSelectedAccountName();
 
         contentResolver.delete(IrisContentProvider.MESSAGES_URI, null, null);
 
-        Gmail.Users.Messages.List mailList = gmail.users().messages().list(credential.getSelectedAccountName())
+        Gmail.Users.Messages.List mailList = gmail.users().messages().list("me")
                 .setFields("messages(id,historyId)")
                 .setQ("in:inbox !is:chat")
                 .setIncludeSpamTrash(false);
@@ -217,7 +223,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     IrisContentProvider.MESSAGES_URI, // URI where data was modified
                     null,                           // No local observer
                     false);
-            GmailUtils.setCurrentHistoryID(context, newHistID);
+            GmailUtils.setCurrentHistoryID(context, userID, newHistID);
         } catch (RemoteException | OperationApplicationException e) {
             Log.e(TAG, "Error updating database: " + e.toString());
         }
@@ -245,7 +251,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Gmail.Users.History.List list;
         try {
             if (histID != null) {
-                list = gmail.users().history().list(credential.getSelectedAccountName())
+                list = gmail.users().history().list("me")
                         .setStartHistoryId(histID)
                         .setLabelId("INBOX")
                         .setFields("history(labelsAdded,labelsRemoved,messagesAdded,messagesDeleted),historyId,nextPageToken");
@@ -272,7 +278,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
      * @throws IOException
      */
     private boolean canPartialSync(GoogleAccountCredential credential) throws IOException {
-        BigInteger histID = GmailUtils.getCurrentHistoryID(context);
+        BigInteger histID = GmailUtils.getCurrentHistoryID(context, credential.getSelectedAccountName());
         if (histID == null) return false;
         try {
             ListHistoryResponse response = getHistoryResponse(credential, histID);
@@ -294,7 +300,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private void performPartialSync(GoogleAccountCredential credential) throws MessagingException, IOException {
         Log.i(TAG, "Performing Partial Sync");
         final ContentResolver contentResolver = context.getContentResolver();
-        BigInteger histID = GmailUtils.getCurrentHistoryID(context);
+        String userID = credential.getSelectedAccountName();
+        BigInteger histID = GmailUtils.getCurrentHistoryID(context, userID);
 
         if (histID == null) {
             Log.e(TAG, "No history ID available. (Maybe invalid or haven't done a full sync)");
@@ -307,7 +314,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             return;
         }
 
-        BigInteger newHistID = GmailUtils.getCurrentHistoryID(context);
+        BigInteger newHistID = GmailUtils.getCurrentHistoryID(context, userID);
         ArrayList<ContentProviderOperation> batch = new ArrayList<>();
         if (response.getHistory() != null) {
             if (!response.getHistory().isEmpty()) {
@@ -359,7 +366,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     deleteMessage(msgID.getId(), batch);
                 }
 
-                GmailUtils.setCurrentHistoryID(context, newHistID);
+                GmailUtils.setCurrentHistoryID(context,userID, newHistID);
                 if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
                     Log.d(TAG, "Putting new messages in the intent.");
                     Intent serviceIntent = new Intent(context, IrisVoiceService.class);
@@ -381,7 +388,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     false);
 
 
-            GmailUtils.setCurrentHistoryID(context, newHistID);
+            GmailUtils.setCurrentHistoryID(context, userID, newHistID);
         } catch (RemoteException | OperationApplicationException e) {
             Log.e(TAG, "Error updating database: " + e.toString());
         }
@@ -436,6 +443,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Date date = new Date(message.getInternalDate());
         batch.add(ContentProviderOperation.newInsert(IrisContentProvider.MESSAGES_URI)
                 .withValue(IrisContentProvider.MESSAGE_ID, message.getId())
+                .withValue(IrisContentProvider.USER_ID, credential.getSelectedAccountName())
                 .withValue(IrisContentProvider.HISTORYID, message.getHistoryId().toString())
                 .withValue(IrisContentProvider.INTERNALDATE, message.getInternalDate())
                 .withValue(IrisContentProvider.DATE, (new SimpleDateFormat("M/d/yy h:mm a", Locale.US).format(date)))
@@ -450,6 +458,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
 
     }
 
+    //TODO: Check if need filter delete based on account ID
     /**
      * Add a delete message operation to the specified database batch.
      * @param msgID The ID of the message to delete.

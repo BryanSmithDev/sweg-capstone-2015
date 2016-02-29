@@ -345,10 +345,10 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 queuedMessages.remove(0);
                 queuedMimeMessages.remove(0);
                 readCurrentMessage();
-                if (currentMessageID != null && !currentMessageID.equals(""))
-                    GmailUtils.removeLabelFromMessage(getApplicationContext(),
-                            currentMessageID,
-                            "UNREAD");
+                //if (currentMessageID != null && !currentMessageID.equals(""))
+                    //GmailUtils.removeLabelFromMessage(getApplicationContext(),
+                    //        currentMessageID,
+                    //        "UNREAD");
             }
         });
 
@@ -360,7 +360,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 queuedMimeMessages.remove(0);
                 readCurrentMessage();
                 if (currentMessageID != null && !currentMessageID.equals("")) {
-                    GmailUtils.deleteMessage(getApplicationContext(), currentMessageID);
+                    //GmailUtils.deleteMessage(getApplicationContext(), currentMessageID);
                     ContentResolver contentResolver = getContentResolver();
                     int result = contentResolver.delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.MESSAGE_ID + " = ?", new String[]{currentMessageID});
                     Log.d(TAG, "Deleted: " + result);

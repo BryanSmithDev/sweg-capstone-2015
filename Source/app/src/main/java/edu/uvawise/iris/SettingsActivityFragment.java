@@ -138,11 +138,11 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
      * or not.
      */
     private void setLogoutPreference() {
-        String acc = GmailUtils.getGmailAccountName(context);
+       /** String acc = GmailUtils.getGmailAccountName(context);
         Preference p = findPreference("logout");
         if (p == null) return;
         if (acc.equals("")) p.setTitle("Login");
         else p.setTitle("Logout");
-        p.setSummary(acc);
+        p.setSummary(acc); **/
     }
 }
