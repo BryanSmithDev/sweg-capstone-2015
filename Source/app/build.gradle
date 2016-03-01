@@ -26,13 +26,13 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:23.1.1'
-    compile 'com.android.support:design:23.1.1'
-    compile 'com.google.android.gms:play-services-identity:8.3.0'
-    compile('com.google.api-client:google-api-client-android:1.20.0') {
+    compile 'com.android.support:appcompat-v7:23.2.0'
+    compile 'com.android.support:design:23.2.0'
+    compile 'com.google.android.gms:play-services-identity:8.4.0'
+    compile('com.google.api-client:google-api-client-android:1.21.0') {
         exclude group: 'org.apache.httpcomponents'
     }
-    compile('com.google.apis:google-api-services-gmail:v1-rev34-1.20.0') {
+    compile('com.google.apis:google-api-services-gmail:v1-rev38-1.21.0') {
         exclude group: 'org.apache.httpcomponents'
     }
     compile 'javax.mail:mail:1.4.1'
