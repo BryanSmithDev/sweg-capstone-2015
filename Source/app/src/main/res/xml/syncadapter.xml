@@ -16,7 +16,7 @@ limitations under the License.
 
 <sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
     android:accountType="com.google"
-    android:allowParallelSyncs="false"
+    android:allowParallelSyncs="true"
     android:contentAuthority="edu.uvawise.iris.sync"
     android:isAlwaysSyncable="true"
     android:supportsUploading="false"
