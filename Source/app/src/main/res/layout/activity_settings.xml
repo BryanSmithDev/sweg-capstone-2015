@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:background="@color/primary"
         android:elevation="4dp"
-        android:minHeight="?android:attr/actionBarSize"></android.support.v7.widget.Toolbar>
+        android:minHeight="?android:attr/actionBarSize"
+        android:fitsSystemWindows="true"/>
 
     <fragment xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/fragment"

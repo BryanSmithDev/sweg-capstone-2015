@@ -11,7 +11,8 @@
         android:layout_height="wrap_content"
         android:background="@color/primary"
         android:elevation="4dp"
-        android:minHeight="?android:attr/actionBarSize">
+        android:minHeight="?android:attr/actionBarSize"
+        android:fitsSystemWindows="true">
 
     </android.support.v7.widget.Toolbar>
 
