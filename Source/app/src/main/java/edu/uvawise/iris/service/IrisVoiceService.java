@@ -84,6 +84,8 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     //The message that the overlay is currently displaying
     private String currentMessageID = "";
 
+    private String currentMessageAccount = "";
+
     //Message observer that listens for new messages.
     private MessagesObserver messagesObserver = new MessagesObserver(new Handler());
 

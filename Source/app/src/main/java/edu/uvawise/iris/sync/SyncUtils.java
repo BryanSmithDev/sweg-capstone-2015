@@ -38,6 +38,9 @@ public class SyncUtils {
     public static void syncNow(Context context) {
         Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
         ArrayList<GmailAccount> googleAccounts = GmailUtils.getGmailAccounts(context);
+
+        if (googleAccounts == null || googleAccounts.isEmpty()) return;
+
         Bundle b = new Bundle();
         // Disable sync backoff and ignore sync preferences. In other words...perform sync NOW!
         b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
@@ -92,21 +95,41 @@ public class SyncUtils {
     }
 
     /**
-     * Check if sync is enabled.
+     * Check if sync is enabled for an account.
+     *
+     * @param context The context to run in.
+     */
+    public static boolean isSyncEnabled(Context context, String userID) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
+
+        if (!GmailUtils.isSyncing(context)) return false;
+
+        for (Account account : accounts) {
+                if (userID.equals(account.name)) {
+                    boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account, SyncUtils.SYNC_AUTH);
+                    boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
+                    if (isMasterSyncEnabled && isYourAccountSyncEnabled) return true;
+                }
+
+        }
+        return false;
+    }
+
+    /**
+     * Check if sync is enabled for all accounts.
      *
      * @param context The context to run in.
      */
     public static boolean isSyncEnabled(Context context) {
-        Account[] am = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
-        if (!GmailUtils.isSyncing(context)) return false;
-        for (Account account : am) {
-           // if (GmailUtils.getGmailAccountName(context).equals(account.name)) {
-                boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account, SyncUtils.SYNC_AUTH);
-                boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
-                if (isMasterSyncEnabled && isYourAccountSyncEnabled) return true;
-           // }
+        ArrayList<GmailAccount> googleAccounts = GmailUtils.getGmailAccounts(context);
+
+        if (googleAccounts == null || googleAccounts.isEmpty()) return false;
+
+        for (GmailAccount gAccount : googleAccounts) {
+            if (!isSyncEnabled(context, gAccount.getUserID())) return false;
         }
-        return false;
+
+        return true;
     }
 
     /**

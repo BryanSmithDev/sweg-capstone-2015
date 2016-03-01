@@ -276,6 +276,7 @@ public abstract class GmailUtils {
                 IrisContentProvider.USER_ID + " = ?",
                 new String[]{userID},
                 null);
+        if (histCursor == null) return new BigInteger("0");
         histCursor.moveToFirst();
         BigInteger result = new BigInteger(histCursor.getString(0));
         histCursor.close();
@@ -287,6 +288,8 @@ public abstract class GmailUtils {
 
         Cursor accCursor = context.getContentResolver().query(IrisContentProvider.ACCOUNT_URI,null,null,null,null);
         ArrayList<GmailAccount> accounts = new ArrayList<>();
+
+        if (accCursor == null) return null;
         accCursor.moveToFirst();
 
         int i =0;
@@ -300,6 +303,26 @@ public abstract class GmailUtils {
         accCursor.close();
 
         return accounts;
+    }
+
+    public static String getGmailAccount(Context context, int index){
+
+        Cursor accCursor = context.getContentResolver().query(IrisContentProvider.ACCOUNT_URI,null,null,null,null);
+        String result = "";
+        if (accCursor == null) return null;
+        accCursor.moveToFirst();
+
+        int i=0;
+        while (!accCursor.isAfterLast()) {
+            result = accCursor.getString(1);
+            Log.d(TAG,"GetGmailAccount at "+index+" : "+accCursor.getString(1));
+            if (i==index) break;
+            accCursor.moveToNext();
+            i++;
+        }
+        accCursor.close();
+
+        return result;
     }
 
     public static void setCurrentHistoryID(Context context, String userID, BigInteger histID) {

@@ -1,7 +1,6 @@
 package edu.uvawise.iris;
 
 import android.Manifest;
-import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Dialog;
 import android.content.ContentProviderOperation;
@@ -30,6 +29,7 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.view.menu.ActionMenuItemView;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -46,6 +46,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccoun
 import java.util.ArrayList;
 
 import edu.uvawise.iris.service.IrisVoiceService;
+import edu.uvawise.iris.sync.GmailAccount;
 import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.sync.SyncUtils;
 import edu.uvawise.iris.utils.GmailUtils;
@@ -54,7 +55,7 @@ import edu.uvawise.iris.utils.PrefUtils;
 /**
  * MainActivity - The main activity for the application providing entry. Shows a list of emails.
  */
-public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+public class MainActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor>, ActionBar.OnNavigationListener {
 
     //Constants that define methods that can be called via launching this Activity via Intent
     public static final String METHOD_TO_CALL = "KEY_METHOD_TO_CALL";
@@ -72,10 +73,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     static final int MESSAGES_LOADER_ID = 0;
     static final int ACCOUNT_LOADER_ID = 1;
     GoogleAccountCredential credential; //Our Google(Gmail) account credential
+    Toolbar mToolbar;
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
     ListView mListView;     //Our email list
     SimpleCursorAdapter mEmailListAdapter; //The adapter to manage data in our email list.
     SimpleCursorAdapter mAccountsAdapter; //The adapter to manage data in our email list.
+    int mSelectedAccount = 0;
 
     /**
      * Called when a new intent is passed to the activity.
@@ -138,9 +141,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); //Load main layout xml
 
+        mToolbar = (Toolbar) findViewById(R.id.toolbar); // Attaching the layout to the toolbar object
+        setSupportActionBar(mToolbar);
+
         //Find and initialize the swipe-to-refresh view. And set its color scheme.
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_container);
         mSwipeRefreshLayout.setColorSchemeResources(R.color.primary, R.color.accent);
+        mSwipeRefreshLayout.setNestedScrollingEnabled(true);
 
          /*
          * Sets up a SwipeRefreshLayout.OnRefreshListener that is invoked when the user
@@ -176,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     Log.d(TAG, "Sync Frequency Changed");
                     if (SyncUtils.isSyncEnabled(getContext())) {
                         Log.d(TAG, "Sync Frequency was enabled. Re-enabling to use new freq");
-                        //SyncUtils.enableSync(getContext());
+                        SyncUtils.enableSync(getContext());
                     } else {
                         Log.d(TAG, "Sync wasn't enabled. No need to re-enable.");
                     }
@@ -343,35 +350,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         });
 
-        final String[] listItems = {"Account 1", "Account 2"};
 
-        mAccountsAdapter = new SimpleCursorAdapter(this,
+
+        mAccountsAdapter = new SimpleCursorAdapter(getSupportActionBar().getThemedContext(),
                 android.R.layout.simple_dropdown_item_1line, null,
                 new String[]{IrisContentProvider.USER_ID},
                 new int[]{android.R.id.text1}, 0);
 
-        // Callback
-        ActionBar.OnNavigationListener callback = new ActionBar.OnNavigationListener() {
 
 
-            @Override
-            public boolean onNavigationItemSelected(int position, long id) {
-
-                // Do stuff when navigation item is selected
-
-                Log.d("NavigationItemSelected", listItems[position]); // Debug
-
-                return true;
-
-            }
-
-        };
 
         // Action Bar
         ActionBar actions = getSupportActionBar();
         actions.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
         actions.setDisplayShowTitleEnabled(false);
-        actions.setListNavigationCallbacks(mAccountsAdapter, callback);
+        actions.setListNavigationCallbacks(mAccountsAdapter, this);
 
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
@@ -560,12 +553,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      */
     private void login() {
         if (hasGetAccountsPermission()) {
-            if (credential.getSelectedAccountName() == null) {
-                chooseAccount();
-            } else {
-                if (!isDeviceOnline()) {
-                    Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
+            if (isDeviceOnline()) {
+                ArrayList<GmailAccount> accs = GmailUtils.getGmailAccounts(this);
+                if (accs == null || accs.isEmpty()) {
+                    Log.d(TAG,"No accounts logged in. Pick an account.");
+                    chooseAccount();
                 }
+            } else {
+                Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -575,18 +570,18 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      */
     private void forceSync() {
         if (hasGetAccountsPermission()) {
-            if (credential.getSelectedAccountName() == null) {
-                chooseAccount();
+            if (!isDeviceOnline()) {
+                Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
             } else {
-                if (!isDeviceOnline()) {
-                    Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
+                String acc = GmailUtils.getGmailAccount(this,mSelectedAccount);
+                if (acc == null ) {
+                    return;
+                }
+                if (SyncUtils.isSyncEnabled(this, acc)) {
+                    mSwipeRefreshLayout.setRefreshing(true);
+                    SyncUtils.syncNow(this);
                 } else {
-                    if (SyncUtils.isSyncEnabled(this)) {
-                        mSwipeRefreshLayout.setRefreshing(true);
-                        SyncUtils.syncNow(this);
-                    } else {
-                        Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
-                    }
+                    Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
                 }
             }
         }
@@ -687,8 +682,19 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
                 // Now create and return a CursorLoader that will take care of
                 // creating a Cursor for the data being displayed.
+
+                String selection = null;
+                String[] selectionArgs = null;
+                String userID;
+                if (args != null) {
+                    userID = args.getString(IrisContentProvider.USER_ID);
+                    selection = IrisContentProvider.USER_ID + " = ?";
+                    selectionArgs = new String[]{userID};
+                }
+
+
                 return new CursorLoader(this, IrisContentProvider.MESSAGES_URI,
-                        new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, null, null,
+                        new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, selection, selectionArgs,
                         null);
             case ACCOUNT_LOADER_ID:
                 Log.d(TAG,"Created account loader");
@@ -751,4 +757,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+    @Override
+    public boolean onNavigationItemSelected(int itemPosition, long itemId) {
+        mSelectedAccount = itemPosition;
+        Bundle args = new Bundle();
+        String userID = GmailUtils.getGmailAccount(this,itemPosition);
+        args.putString(IrisContentProvider.USER_ID,userID);
+        getSupportLoaderManager().restartLoader(MESSAGES_LOADER_ID, args, this);
+        return false;
+    }
 }
