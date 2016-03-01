@@ -442,7 +442,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         values.put(IrisContentProvider.CURR_HIST_ID,"0");
                         getContentResolver().insert(IrisContentProvider.ACCOUNT_URI,values);
                         getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID,null,this);
-                        SyncUtils.enableSyncForAccount(this, new Account(accountName, SyncUtils.ACCOUNT_TYPE));
+                        SyncUtils.enableSync(this);
                     }
                 } else if (resultCode == RESULT_CANCELED) {
                     Toast.makeText(this, R.string.error_no_account_chosen, Toast.LENGTH_LONG).show();

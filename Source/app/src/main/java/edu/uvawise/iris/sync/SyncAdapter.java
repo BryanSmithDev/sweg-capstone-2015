@@ -121,7 +121,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(final Account account, Bundle extras, String authority,
                               ContentProviderClient provider, SyncResult syncResult) {
-        Log.i(TAG, "Beginning synchronization");
+        Log.i(TAG, "Beginning synchronization for: "+account.name);
 
 
        // if (!GmailUtils.isSyncing(context)) {
@@ -141,21 +141,28 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
             return;
         }
 
+        boolean loggedIn = false;
+        for (GmailAccount gmailAccount : accounts) {
+            if (gmailAccount.getUserID().equals(account.name)) {
+                loggedIn = true;
+                break;
+            }
+        }
+
 
         GoogleAccountCredential credential;
-        for (GmailAccount gmailAccount : accounts) {
-            Log.d(TAG, ""+gmailAccount.getUserID() );
+        if (loggedIn) {
+            Log.d(TAG, "" + account.name);
             try {
-                credential = GmailUtils.getGmailAccountCredential(context, gmailAccount.getUserID());
+                credential = GmailUtils.getGmailAccountCredential(context, account.name);
                 if (credential == null) {
                     Log.d(TAG, "Credential Null");
                     return;
                 }
 
-                if (gmail == null) {
-                    gmail = GmailUtils.getGmailService(credential);
-                }
-                Log.d(TAG, "Sync Running for:" + gmailAccount.getUserID());
+                gmail = GmailUtils.getGmailService(credential);
+
+                Log.d(TAG, "Sync Running for:" + credential.getSelectedAccountName());
                 Log.d(TAG, "Cred Name:" + credential.getSelectedAccountName());
 
                 try {
@@ -170,18 +177,18 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
 
 
             } catch (UserRecoverableAuthException e) {
-                GmailUtils.permissionNotification(context, e.getIntent(), gmailAccount.getUserID());
+                GmailUtils.permissionNotification(context, e.getIntent(), account.name);
             } catch (GoogleAuthException e) {
                 Log.e(TAG, "GoogleAuthException", e);
             } catch (UserRecoverableAuthIOException e) {
-                GmailUtils.permissionNotification(context, e.getIntent(), gmailAccount.getUserID());
+                GmailUtils.permissionNotification(context, e.getIntent(), account.name);
             } catch (IOException e) {
                 Log.e(TAG, "IOException", e);
                 syncResult.databaseError = true;
             } finally {
                 credential = null;
             }
-            Log.i(TAG, "Synchronization complete for:"+gmailAccount.getUserID());
+            Log.i(TAG, "Synchronization complete for:" + account.name);
         }
 
     }
@@ -198,7 +205,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         final ContentResolver contentResolver = context.getContentResolver();
         String userID = credential.getSelectedAccountName();
 
-        contentResolver.delete(IrisContentProvider.MESSAGES_URI, null, null);
+        contentResolver.delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID+" = ?", new String[] {userID});
 
         Gmail.Users.Messages.List mailList = gmail.users().messages().list("me")
                 .setFields("messages(id,historyId)")
