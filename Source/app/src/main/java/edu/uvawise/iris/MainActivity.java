@@ -135,8 +135,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                                         Log.d(TAG,"Selected for logout: "+selectedIndex[0]+"  -  "+names[selectedIndex[0]]);
                                         getContentResolver().delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
                                         getContentResolver().delete(IrisContentProvider.ACCOUNT_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
-                                        SyncUtils.disableSync(getApplicationContext());
-                                        SyncUtils.enableSync(getApplicationContext());
+                                        SyncUtils.disableSync(getApplicationContext(),names[selectedIndex[0]]);
                                     }
                                 })
                                 .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
