@@ -44,6 +44,18 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         addPreferencesFromResource(R.xml.preferences);
         initSummary(getPreferenceScreen());
 
+        //When our add account preference is clicked, we need to go back to the Main Activity and add an account.
+        findPreference("addAccount").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+                Intent logoutIntent = new Intent(context, MainActivity.class);
+                logoutIntent.putExtra(MainActivity.METHOD_TO_CALL, MainActivity.ADDACCOUNT);
+                logoutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(logoutIntent);
+                return true;
+            }
+        });
+
         //When our logout preference is clicked, we need to go back to the Main Activity and logout.
         findPreference("logout").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override

@@ -61,6 +61,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     public static final String METHOD_TO_CALL = "KEY_METHOD_TO_CALL";
     public static final int LOGOUT = 0;
     public static final int PAUSE_SERVICE = 1;
+    public static final int ADDACCOUNT = 2;
 
     //Google Constants
     static final int REQUEST_ACCOUNT_PICKER = 1000;
@@ -96,28 +97,55 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         if (-1 != value) {
             switch (value) {
+                case ADDACCOUNT:
+                    chooseAccount();
+                    break;
                 case LOGOUT: //Logout current user & clear data
-                    if (credential.getSelectedAccountName() != null) {
                         //Ask user if they are sure they want to logout
-                        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-                        builder.setMessage(R.string.dialog_logout_message)
-                                .setTitle(credential.getSelectedAccountName());
-                        builder.setPositiveButton(R.string.dialog_logout_yes, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                PrefUtils.clear(getContext());
-                                getContentResolver().delete(IrisContentProvider.MESSAGES_URI, null, null);
-                                credential.setSelectedAccountName(null);
+                        final int[] selectedIndex = new int[1];
+
+                        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(this);
+                        if (accounts == null || accounts.isEmpty()) {
+                            Toast.makeText(this,"",Toast.LENGTH_LONG).show();
+                            return;
+
+                        }
+                        final String[] names = new String[accounts.size()];
+
+                        int i=0;
+                        for(GmailAccount acc : accounts){
+                            names[i] = acc.getUserID();
+                            i++;
+                        }
+
+                        AlertDialog.Builder builder1 = new AlertDialog.Builder(this);
+                        // Set the dialog title
+                        builder1.setTitle("Pick an account to logout:")
+                        .setSingleChoiceItems(names, -1, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                selectedIndex[0] = which;
                             }
-                        });
-                        builder.setNegativeButton(R.string.dialog_logout_no, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                            }
-                        });
-                        AlertDialog dialog = builder.create();
-                        dialog.show();
-                    } else {
-                        chooseAccount();
-                    }
+                        })
+                                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int id) {
+                                        // User clicked OK, so save the mSelectedItems results somewhere
+                                        // or return them to the component that opened the dialog
+                                        Log.d(TAG,"Selected for logout: "+selectedIndex[0]+"  -  "+names[selectedIndex[0]]);
+                                        getContentResolver().delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
+                                        getContentResolver().delete(IrisContentProvider.ACCOUNT_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
+                                        SyncUtils.disableSync(getApplicationContext());
+                                        SyncUtils.enableSync(getApplicationContext());
+                                    }
+                                })
+                                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int id) {
+
+                                    }
+                                });
+                        builder1.show();
                     break;
                 case PAUSE_SERVICE: //Stop service.
                     Intent serviceIntent = new Intent(this, IrisVoiceService.class);

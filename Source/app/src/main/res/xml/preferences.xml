@@ -19,9 +19,10 @@
 
     <PreferenceCategory android:title="@string/pref_cat_accounts" >
         <Preference
-        android:key="logout"
+        android:key="addAccount"
         android:title="Add Account" />
     <PreferenceScreen
+        android:key="logout"
         android:title="Logout of an Account">
 
 
