@@ -59,10 +59,15 @@ public class SyncUtils {
      *
      * @param context The context to run in.
      */
-    public static void disableSync(Context context) {
-        GmailUtils.setIsSyncing(context,false);
-        disableSyncForAll(context);
-
+    public static void disableSync(Context context, String accountName) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
+        for (Account account : accounts) {
+            if (accountName.equals(account.name)) {
+                ContentResolver.cancelSync(account, SyncUtils.SYNC_AUTH);
+                ContentResolver.setIsSyncable(account, SyncUtils.SYNC_AUTH, 0);
+                ContentResolver.setSyncAutomatically(account, SyncUtils.SYNC_AUTH, false);
+            }
+        }
     }
 
     /**
