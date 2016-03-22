@@ -85,6 +85,9 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private Gmail gmail;        //The Gmail API service
 
     private List<String> newMessages = new ArrayList<>();
+    private List<String> newMessageAccounts = new ArrayList<>();
+
+
 
     /**
      * Constructor. Obtains handle to content resolver for later use.
@@ -378,10 +381,14 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     Log.d(TAG, "Putting new messages in the intent.");
                     Intent serviceIntent = new Intent(context, IrisVoiceService.class);
                     String[] stockArr = new String[newMessages.size()];
+                    String[] stockArr2 = new String[newMessageAccounts.size()];
                     stockArr = newMessages.toArray(stockArr);
-                    serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGES_ADDED, stockArr);
+                    serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGES_ADDED, newMessages.toArray(stockArr));
+                    stockArr2 = newMessageAccounts.toArray(stockArr2);
+                    serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGE_ACCOUNTS, newMessageAccounts.toArray(stockArr2));
                     context.startService(serviceIntent);
                     newMessages.clear();
+                    newMessageAccounts.clear();
                 }
             }
         }
@@ -419,9 +426,9 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         Message message;
 
         try {
-            message = gmail.users().messages().get(credential.getSelectedAccountName(), msgID).setFormat("raw").setFields("historyId,id,internalDate,labelIds,raw,snippet").execute();
+            message = gmail.users().messages().get("me", msgID).setFormat("raw").setFields("historyId,id,internalDate,labelIds,raw,snippet").execute();
         } catch (GoogleJsonResponseException e) {
-            Log.d(TAG, "Message no longer exists: " + msgID);
+            Log.d(TAG, "Message no longer exists: " + msgID + " - "+e.getMessage());
             return null;
         }
         if (message == null) return null;
@@ -459,7 +466,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 .withValue(IrisContentProvider.FROM, address)
                 .withValue(IrisContentProvider.BODY, message.getSnippet()).build());
 
-        newMessages.add(message.getFactory().toPrettyString(message));
+        newMessages.add(message.getId());
+        newMessageAccounts.add(credential.getSelectedAccountName());
 
         return message.getHistoryId();
 
