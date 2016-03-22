@@ -10,8 +10,8 @@
     <string name="pref_keep_screen_on_summary">This will prevent the screen from turning off while Iris is running.</string>
     <string name="pref_keep_screen_on_key">pref_keep_screen_on</string>
     <string name="pref_sync_freq_key">pref_sync_freq</string>
-    <string name="pref_sync_freq_title">Sync Frequency</string>
-    <string name="pref_sync_freq_summary">How often do you want to sync data?</string>
+    <string name="pref_sync_freq_title">Idle Sync Frequency</string>
+    <string name="pref_sync_freq_summary">How often do you want to sync data while voice service is NOT running?</string>
     <string name="pref_key_gmail_account_name">GoogleAccount</string>
     <string name="pref_key_gmail_accounts">SignedInGmailAccounts</string>
     <string name="pref_key_gmail_history_id">GmailHistoryID</string>
@@ -27,4 +27,7 @@
     <string name="dialog_logout_no">No</string>
     <string name="pref_cat_accounts">Accounts</string>
     <string name="pref_cat_general">General</string>
+    <string name="service_pref_sync_freq_title">Voice Service Sync Frequency</string>
+    <string name="service_pref_sync_freq_summary">How often to sync while voice service is running?</string>
+    <string name="service_pref_sync_freq_key">pref_service_sync_freq</string>
 </resources>

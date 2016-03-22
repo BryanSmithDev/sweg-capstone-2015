@@ -1,5 +1,6 @@
 package edu.uvawise.iris;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -11,7 +12,9 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
+import edu.uvawise.iris.sync.SyncUtils;
 import edu.uvawise.iris.utils.GmailUtils;
 import edu.uvawise.iris.utils.PrefUtils;
 
@@ -20,6 +23,7 @@ import edu.uvawise.iris.utils.PrefUtils;
  */
 public class SettingsActivityFragment extends PreferenceFragment implements SharedPreferences.OnSharedPreferenceChangeListener {
 
+    private static final String TAG = SettingsActivityFragment.class.getSimpleName();
     Context context; //Store the application context
 
 
@@ -101,6 +105,15 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
                                           String key) {
         updatePrefSummary(findPreference(key));
+        if (key.equals(getString(R.string.pref_sync_freq_key))) {
+            Log.d(TAG, "Sync Frequency Changed");
+            SyncUtils.updateSyncFrequency(getActivity().getApplicationContext(),
+                    SyncUtils.getSyncFrequency(getActivity().getApplicationContext()));
+        } else if (key.equals(getString(R.string.service_pref_sync_freq_key))) {
+            Log.d(TAG, "Service Sync Frequency Changed");
+            SyncUtils.updateSyncFrequency(getActivity().getApplicationContext(),
+                    SyncUtils.getServiceSyncFrequency(getActivity().getApplicationContext()));
+        }
     }
 
 

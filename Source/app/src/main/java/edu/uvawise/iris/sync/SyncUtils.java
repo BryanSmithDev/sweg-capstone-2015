@@ -6,6 +6,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 
 import android.os.Bundle;
+import android.util.Log;
 
 
 import com.google.api.services.gmail.Gmail;
@@ -23,7 +24,8 @@ import edu.uvawise.iris.utils.PrefUtils;
 public class SyncUtils {
 
     private static final String TAG = SyncUtils.class.getSimpleName();
-    private static final int SYNC_FREQUENCY_DEFAULT = 3;
+    private static final int SYNC_FREQUENCY_DEFAULT = 120;
+    private static final int SERVICE_SYNC_FREQUENCY_DEFAULT = 1;
 
     //Sync Authorities.
     public static final String ACCOUNT_TYPE = "com.google";
@@ -173,13 +175,34 @@ public class SyncUtils {
                 account, SyncUtils.SYNC_AUTH, new Bundle(), 60 * min);
     }
 
+    public static void updateSyncFrequency(Context context, int min){
+        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
+        if (accounts == null || accounts.isEmpty()) return;
+        for (GmailAccount account: accounts) {
+            if (isSyncEnabled(context,account.getUserID())){
+                Account acc = new Account(account.getUserID(),ACCOUNT_TYPE);
+                ContentResolver.addPeriodicSync(acc,SYNC_AUTH,new Bundle(), 60 * min);
+                Log.i(TAG,"Updated "+account.getUserID()+"'s sync freq to "+min+" mins");
+            }
+        }
+    }
+
     /**
      * Gets the currently saved sync frequency from preferences
      * @param context The context to use to retrieve the preferences
      * @return Integer value saved for the sync frequency, or the default value.
      */
-    private static int getSyncFrequency(Context context){
+    public static int getSyncFrequency(Context context){
         return Integer.parseInt(PrefUtils.getString(context,R.string.pref_sync_freq_key,SYNC_FREQUENCY_DEFAULT+""));
+    }
+
+    /**
+     * Gets the currently saved voice service sync frequency from preferences
+     * @param context The context to use to retrieve the preferences
+     * @return Integer value saved for the sync frequency, or the default value.
+     */
+    public static int getServiceSyncFrequency(Context context){
+        return Integer.parseInt(PrefUtils.getString(context,R.string.service_pref_sync_freq_key,SERVICE_SYNC_FREQUENCY_DEFAULT+""));
     }
 
 }

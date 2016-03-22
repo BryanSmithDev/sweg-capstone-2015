@@ -9,13 +9,23 @@
 
 
     <ListPreference
-        android:defaultValue='3'
+        android:defaultValue='1'
+        android:entries="@array/service_sync_freqs"
+        android:entryValues="@array/service_sync_freqs_values"
+        android:key="@string/service_pref_sync_freq_key"
+        android:summary="@string/service_pref_sync_freq_summary"
+        android:title="@string/service_pref_sync_freq_title" />
+
+    <ListPreference
+        android:defaultValue='120'
         android:entries="@array/sync_freqs"
         android:entryValues="@array/sync_freqs_values"
         android:key="@string/pref_sync_freq_key"
         android:summary="@string/pref_sync_freq_summary"
         android:title="@string/pref_sync_freq_title" />
+
     </PreferenceCategory>
+
 
     <PreferenceCategory android:title="@string/pref_cat_accounts" >
         <Preference

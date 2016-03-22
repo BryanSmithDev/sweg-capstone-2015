@@ -150,6 +150,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 case PAUSE_SERVICE: //Stop service.
                     Intent serviceIntent = new Intent(this, IrisVoiceService.class);
                     stopService(serviceIntent);
+                    SyncUtils.updateSyncFrequency(this,SyncUtils.getSyncFrequency(this));
                     ((ActionMenuItemView) findViewById(R.id.action_service)).
                             setIcon(getResources().getDrawable(android.R.drawable.ic_media_play));
                     break;
@@ -200,26 +201,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
         //Check to see if the user wants us to keep their screen on while the app is running.
         enforceScreenOnFlag();
-
-
-        //If we changed the sync frequency in the settings activity, we need to disable and reenable
-        // the sync so the new frequency is used.
-        // TODO: This can probably be moved into the settings fragment code.
-        SharedPreferences.OnSharedPreferenceChangeListener prefListener = new SharedPreferences.OnSharedPreferenceChangeListener() {
-            public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
-                if (key.equals(getString(R.string.pref_sync_freq_key))) {
-                    Log.d(TAG, "Sync Frequency Changed");
-                    if (SyncUtils.isSyncEnabled(getContext())) {
-                        Log.d(TAG, "Sync Frequency was enabled. Re-enabling to use new freq");
-                        SyncUtils.enableSync(getContext());
-                    } else {
-                        Log.d(TAG, "Sync wasn't enabled. No need to re-enable.");
-                    }
-                }
-
-            }
-        };
-        PrefUtils.getSharedPreferences(this).registerOnSharedPreferenceChangeListener(prefListener); //Assign the listener
 
         //Setup our Email List
         mListView = (ListView) findViewById(R.id.emailList);
@@ -523,10 +504,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     //display it.
                     if (!hasDrawOverAppsPermission()) return false;
                     item.setIcon(android.R.drawable.ic_media_pause);
+                    SyncUtils.updateSyncFrequency(this,SyncUtils.getServiceSyncFrequency(this));
                     startService(serviceIntent); //Start background service
                 } else {
                     //Its already running so we need to stop it with this click.
                     item.setIcon(android.R.drawable.ic_media_play);
+                    SyncUtils.updateSyncFrequency(this,SyncUtils.getSyncFrequency(this));
                     stopService(serviceIntent);
                 }
                 return true;
