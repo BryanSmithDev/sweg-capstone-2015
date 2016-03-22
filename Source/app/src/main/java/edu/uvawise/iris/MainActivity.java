@@ -80,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     SimpleCursorAdapter mEmailListAdapter; //The adapter to manage data in our email list.
     SimpleCursorAdapter mAccountsAdapter; //The adapter to manage data in our email list.
     int mSelectedAccount = 0;
+    String mSelectedAccountName = "";
 
     /**
      * Called when a new intent is passed to the activity.
@@ -293,10 +294,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 switch (item.getItemId()) {
 
                     case R.id.action_delete:
-                        //GmailUtils.deleteMessages(getContext(), gatherSelections());
+                        GmailUtils.deleteMessages(getContext(), mSelectedAccountName, gatherSelections());
                         return true;
                     case R.id.action_archive:
-                        //GmailUtils.archiveMessages(getContext(), gatherSelections());
+                        GmailUtils.archiveMessages(getContext(), mSelectedAccountName, gatherSelections());
                         return true;
                     default:
                         return false;
@@ -789,6 +790,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mSelectedAccount = itemPosition;
         Bundle args = new Bundle();
         String userID = GmailUtils.getGmailAccount(this,itemPosition);
+        mSelectedAccountName = userID;
         args.putString(IrisContentProvider.USER_ID,userID);
         getSupportLoaderManager().restartLoader(MESSAGES_LOADER_ID, args, this);
         return false;
