@@ -15,6 +15,7 @@ android {
         targetSdkVersion 23
         versionCode 1
         versionName "0.1"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
@@ -26,8 +27,8 @@ android {
 }
 
 dependencies {
-    compile 'com.android.support:appcompat-v7:23.2.0'
-    compile 'com.android.support:design:23.2.0'
+    compile 'com.android.support:appcompat-v7:23.2.1'
+    compile 'com.android.support:design:23.2.1'
     compile 'com.google.android.gms:play-services-identity:8.4.0'
     compile('com.google.api-client:google-api-client-android:1.21.0') {
         exclude group: 'org.apache.httpcomponents'
@@ -36,4 +37,14 @@ dependencies {
         exclude group: 'org.apache.httpcomponents'
     }
     compile 'javax.mail:mail:1.4.1'
+
+    //Unit testing
+    androidTestCompile 'junit:junit:4.12'
+    androidTestCompile 'org.mockito:mockito-core:1.10.19'
+    androidTestCompile 'com.android.support:support-annotations:23.2.1'
+    androidTestCompile 'com.android.support.test:runner:0.4.1'
+    androidTestCompile 'com.android.support.test:rules:0.4.1'
+    androidTestCompile 'org.hamcrest:hamcrest-library:1.3'
+
+
 }

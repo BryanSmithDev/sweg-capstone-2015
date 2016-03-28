@@ -8,9 +8,6 @@ import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 
-
-import com.google.api.services.gmail.Gmail;
-
 import java.util.ArrayList;
 
 import edu.uvawise.iris.R;

@@ -1,6 +1,7 @@
 package edu.uvawise.iris.service;
 
 
+import android.Manifest;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -8,6 +9,7 @@ import android.app.Service;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
@@ -15,6 +17,9 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.speech.tts.TextToSpeech;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.ServiceCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.NotificationCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -169,7 +174,9 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-        windowManager.addView(root, params); //Add the overlay to the window.
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(),Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_GRANTED) {
+            windowManager.addView(root, params); //Add the overlay to the window.
+        }
 
     }
 
@@ -246,6 +253,8 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     public IBinder onBind(Intent intent) {
         return null;
     }
+
+
 
     /**
      * Called when the text to speech engine is initialized.

@@ -1,13 +1,15 @@
 package edu.uvawise.iris;
 
-import android.app.Application;
-import android.test.ApplicationTestCase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 
-/**
- * <a href="http://d.android.com/tools/testing/testing_android.html">Testing Fundamentals</a>
- */
-public class ApplicationTest extends ApplicationTestCase<Application> {
-    public ApplicationTest() {
-        super(Application.class);
-    }
-}
+import edu.uvawise.iris.service.IrisVoiceServiceTest;
+import edu.uvawise.iris.sync.GmailAccountTest;
+import edu.uvawise.iris.utils.GmailUtilsTest;
+import edu.uvawise.iris.utils.PrefUtilsTest;
+
+// Runs all unit tests.
+@RunWith(Suite.class)
+@Suite.SuiteClasses({GmailAccountTest.class,
+        IrisVoiceServiceTest.class, PrefUtilsTest.class,GmailUtilsTest.class})
+public class ApplicationTest {}

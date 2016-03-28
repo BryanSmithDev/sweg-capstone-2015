@@ -49,6 +49,7 @@ import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.sync.GmailAccount;
 import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.sync.SyncUtils;
+import edu.uvawise.iris.utils.AndroidUtils;
 import edu.uvawise.iris.utils.GmailUtils;
 import edu.uvawise.iris.utils.PrefUtils;
 
@@ -523,37 +524,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     }
 
     /**
-     * Check to see if the app has permission to draw the overlay. This is considered a dangerous
-     * permission as of API 23 and requires us to ask for permission explicitly at runtime.
-     * @return True if we have permission.
-     */
-    private boolean hasDrawOverAppsPermission() {
-        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_DENIED;
-        if (result) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.SYSTEM_ALERT_WINDOW},
-                    0);
-        } else {
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Check to see if the app has permission to get accounts on the device. This is considered a dangerous
      * permission as of API 23 and requires us to ask for permission explicitly at runtime.
      * @return True if we have permission.
      */
     private boolean hasGetAccountsPermission() {
-        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_DENIED;
-        if (result) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.GET_ACCOUNTS},
-                    0);
-        } else {
-            return true;
-        }
-        return false;
+        return AndroidUtils.hasPermission(this,Manifest.permission.GET_ACCOUNTS,this);
+    }
+
+    /**
+     * Check to see if the app has permission to draw the overlay. This is considered a dangerous
+     * permission as of API 23 and requires us to ask for permission explicitly at runtime.
+     * @return True if we have permission.
+     */
+    private boolean hasDrawOverAppsPermission() {
+        return AndroidUtils.hasPermission(this,Manifest.permission.SYSTEM_ALERT_WINDOW,this);
     }
 
 

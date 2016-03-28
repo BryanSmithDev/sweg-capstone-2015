@@ -41,7 +41,7 @@ public abstract class GmailUtils {
     private static String TAG = GmailUtils.class.getSimpleName(); //LOG TAG
 
     //Our GMAIL API Permission Scopes.
-    private static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
+    public static final String[] SCOPES = {GmailScopes.MAIL_GOOGLE_COM,
             GmailScopes.GMAIL_READONLY,
             GmailScopes.GMAIL_MODIFY};
 
@@ -79,6 +79,7 @@ public abstract class GmailUtils {
      */
     public static String getToken(Context context, String accountName, List<String> scope)
             throws IOException, GoogleAuthException {
+        if (scope == null) scope = Arrays.asList(SCOPES);
         GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(context, scope);
         credential.setSelectedAccountName(accountName);
         return credential.getToken();
