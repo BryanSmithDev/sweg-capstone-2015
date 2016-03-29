@@ -11,12 +11,15 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.OperationApplicationException;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.RemoteException;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.widget.SimpleCursorAdapter;
@@ -534,7 +537,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * @return True if we have permission.
      */
     private boolean hasGetAccountsPermission() {
-        return AndroidUtils.hasPermission(this, Manifest.permission.GET_ACCOUNTS, this);
+        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.GET_ACCOUNTS) == PackageManager.PERMISSION_DENIED;
+        if (result) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.GET_ACCOUNTS},
+                    0);
+        } else {
+            return true;
+        }
+        return false;
     }
 
 
@@ -545,7 +556,15 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * @return True if we have permission.
      */
     private boolean hasDrawOverAppsPermission() {
-        return AndroidUtils.hasPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW, this);
+        boolean result = ContextCompat.checkSelfPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_DENIED;
+        if (result) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.SYSTEM_ALERT_WINDOW},
+                    0);
+        } else {
+            return true;
+        }
+        return false;
     }
 
 
