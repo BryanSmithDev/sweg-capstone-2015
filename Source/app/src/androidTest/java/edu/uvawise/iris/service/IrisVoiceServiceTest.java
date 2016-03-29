@@ -1,17 +1,12 @@
 package edu.uvawise.iris.service;
 
 import android.content.Intent;
-import android.os.IBinder;
 import android.support.test.InstrumentationRegistry;
 import android.support.test.rule.ServiceTestRule;
-import android.support.test.runner.AndroidJUnit4;
 import android.test.AndroidTestCase;
-import android.test.ServiceTestCase;
-import android.test.suitebuilder.annotation.MediumTest;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.concurrent.TimeoutException;
 

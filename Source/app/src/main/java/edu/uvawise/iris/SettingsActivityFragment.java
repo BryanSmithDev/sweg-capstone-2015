@@ -1,6 +1,5 @@
 package edu.uvawise.iris;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -15,7 +14,6 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import edu.uvawise.iris.sync.SyncUtils;
-import edu.uvawise.iris.utils.GmailUtils;
 import edu.uvawise.iris.utils.PrefUtils;
 
 /**
