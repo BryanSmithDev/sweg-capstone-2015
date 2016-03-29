@@ -64,12 +64,9 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     static final int REQUEST_ACCOUNT_PICKER = 1000;
     static final int REQUEST_AUTHORIZATION = 1001;
     static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-
-    private static final String TAG = MainActivity.class.getSimpleName(); //Log tag for this class
-
-
     static final int MESSAGES_LOADER_ID = 0;
     static final int ACCOUNT_LOADER_ID = 1;
+    private static final String TAG = MainActivity.class.getSimpleName(); //Log tag for this class
     GoogleAccountCredential credential; //Our Google(Gmail) account credential
     Toolbar mToolbar;
     SwipeRefreshLayout mSwipeRefreshLayout; //Swipe to refresh view
@@ -78,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     SimpleCursorAdapter mAccountsAdapter; //The adapter to manage data in our email list.
     int mSelectedAccount = 0;
     String mSelectedAccountName = "";
+
 
     /**
      * Called when a new intent is passed to the activity.
@@ -99,55 +97,55 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     chooseAccount();
                     break;
                 case LOGOUT: //Logout current user & clear data
-                        //Ask user if they are sure they want to logout
-                        final int[] selectedIndex = new int[1];
+                    //Ask user if they are sure they want to logout
+                    final int[] selectedIndex = new int[1];
 
-                        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(this);
-                        if (accounts == null || accounts.isEmpty()) {
-                            Toast.makeText(this,"",Toast.LENGTH_LONG).show();
-                            return;
+                    ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(this);
+                    if (accounts == null || accounts.isEmpty()) {
+                        Toast.makeText(this, "", Toast.LENGTH_LONG).show();
+                        return;
 
-                        }
-                        final String[] names = new String[accounts.size()];
+                    }
+                    final String[] names = new String[accounts.size()];
 
-                        int i=0;
-                        for(GmailAccount acc : accounts){
-                            names[i] = acc.getUserID();
-                            i++;
-                        }
+                    int i = 0;
+                    for (GmailAccount acc : accounts) {
+                        names[i] = acc.getUserID();
+                        i++;
+                    }
 
-                        AlertDialog.Builder builder1 = new AlertDialog.Builder(this);
-                        // Set the dialog title
-                        builder1.setTitle("Pick an account to logout:")
-                        .setSingleChoiceItems(names, -1, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                selectedIndex[0] = which;
-                            }
-                        })
-                                .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int id) {
-                                        // User clicked OK, so save the mSelectedItems results somewhere
-                                        // or return them to the component that opened the dialog
-                                        Log.d(TAG,"Selected for logout: "+selectedIndex[0]+"  -  "+names[selectedIndex[0]]);
-                                        getContentResolver().delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
-                                        getContentResolver().delete(IrisContentProvider.ACCOUNT_URI, IrisContentProvider.USER_ID+" = ?", new String[]{names[selectedIndex[0]]});
-                                        SyncUtils.disableSync(getApplicationContext(),names[selectedIndex[0]]);
-                                    }
-                                })
-                                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int id) {
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(this);
+                    // Set the dialog title
+                    builder1.setTitle("Pick an account to logout:")
+                            .setSingleChoiceItems(names, -1, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    selectedIndex[0] = which;
+                                }
+                            })
+                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int id) {
+                                    // User clicked OK, so save the mSelectedItems results somewhere
+                                    // or return them to the component that opened the dialog
+                                    Log.d(TAG, "Selected for logout: " + selectedIndex[0] + "  -  " + names[selectedIndex[0]]);
+                                    getContentResolver().delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID + " = ?", new String[]{names[selectedIndex[0]]});
+                                    getContentResolver().delete(IrisContentProvider.ACCOUNT_URI, IrisContentProvider.USER_ID + " = ?", new String[]{names[selectedIndex[0]]});
+                                    SyncUtils.disableSync(getApplicationContext(), names[selectedIndex[0]]);
+                                }
+                            })
+                            .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int id) {
 
-                                    }
-                                });
-                        builder1.show();
+                                }
+                            });
+                    builder1.show();
                     break;
                 case PAUSE_SERVICE: //Stop service.
                     Intent serviceIntent = new Intent(this, IrisVoiceService.class);
                     stopService(serviceIntent);
-                    SyncUtils.updateSyncFrequency(this,SyncUtils.getSyncFrequency(this));
+                    SyncUtils.updateSyncFrequency(this, SyncUtils.getSyncFrequency(this));
                     ((ActionMenuItemView) findViewById(R.id.action_service)).
                             setIcon(getResources().getDrawable(android.R.drawable.ic_media_play));
                     break;
@@ -156,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         super.onNewIntent(intent);
     }
+
 
     /**
      * Create the main activity.
@@ -241,6 +240,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
             }
 
+
             /**
              * Generate a placeholder string (ex: ?,?,?)
              * @param len The number of placeholders
@@ -259,6 +259,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     return sb.toString();
                 }
             }
+
 
             /**
              * When a button on the context bar is pressed this method is called.
@@ -281,6 +282,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         return false;
                 }
             }
+
 
             /**
              * Gets all the currently selected items in the list. Then queries the local message
@@ -333,6 +335,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return messageIDs;
             }
 
+
             @Override
             public boolean onCreateActionMode(android.view.ActionMode mode, Menu menu) {
                 // Inflate the menu for the CAB
@@ -342,11 +345,13 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 return true;
             }
 
+
             @Override
             public void onDestroyActionMode(android.view.ActionMode mode) {
                 // Here you can make any necessary updates to the activity when
                 // the CAB is removed. By default, selected items are deselected/unchecked.
             }
+
 
             @Override
             public boolean onPrepareActionMode(android.view.ActionMode mode, Menu menu) {
@@ -357,13 +362,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
 
 
-
         mAccountsAdapter = new SimpleCursorAdapter(getSupportActionBar().getThemedContext(),
                 android.R.layout.simple_dropdown_item_1line, null,
                 new String[]{IrisContentProvider.USER_ID},
                 new int[]{android.R.id.text1}, 0);
-
-
 
 
         // Action Bar
@@ -375,15 +377,16 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
         getSupportLoaderManager().initLoader(MESSAGES_LOADER_ID, null, this);
-        getSupportLoaderManager().initLoader(ACCOUNT_LOADER_ID,null,this);
+        getSupportLoaderManager().initLoader(ACCOUNT_LOADER_ID, null, this);
     }
+
 
     /**
      * Check to see if user wants to keep the screen on while the app is open. If so, add the
      * needed window flag.
      */
     private void enforceScreenOnFlag() {
-        if (PrefUtils.getBoolean(this,R.string.pref_keep_screen_on_key,false)) {
+        if (PrefUtils.getBoolean(this, R.string.pref_keep_screen_on_key, false)) {
             //If the user wants us to, we will set the flag to make it happen
             Log.d(TAG, "Keep Screen On Flag - On");
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -406,6 +409,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             login();
         }
     }
+
 
     /**
      * Called when an activity launched here (specifically, AccountPicker
@@ -437,10 +441,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         Log.d(TAG, "Account Picked - " + accountName);
                         credential.setSelectedAccountName(accountName);
                         ContentValues values = new ContentValues();
-                        values.put(IrisContentProvider.USER_ID,accountName);
-                        values.put(IrisContentProvider.CURR_HIST_ID,"0");
-                        getContentResolver().insert(IrisContentProvider.ACCOUNT_URI,values);
-                        getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID,null,this);
+                        values.put(IrisContentProvider.USER_ID, accountName);
+                        values.put(IrisContentProvider.CURR_HIST_ID, "0");
+                        getContentResolver().insert(IrisContentProvider.ACCOUNT_URI, values);
+                        getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID, null, this);
                         SyncUtils.enableSync(this);
                     }
                 } else if (resultCode == RESULT_CANCELED) {
@@ -461,6 +465,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     /**
      * This is called by the activity to create the menu for the activity's action bar.
+     *
      * @param menu The menu that is to be created
      * @return True if the menu was created successfully.
      */
@@ -480,8 +485,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         return true;
     }
 
+
     /**
      * Called when an action bar menu item is clicked.
+     *
      * @param item The item that was clicked
      * @return True if the click was handled.
      */
@@ -501,12 +508,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     //display it.
                     if (!hasDrawOverAppsPermission()) return false;
                     item.setIcon(android.R.drawable.ic_media_pause);
-                    SyncUtils.updateSyncFrequency(this,SyncUtils.getServiceSyncFrequency(this));
+                    SyncUtils.updateSyncFrequency(this, SyncUtils.getServiceSyncFrequency(this));
                     startService(serviceIntent); //Start background service
                 } else {
                     //Its already running so we need to stop it with this click.
                     item.setIcon(android.R.drawable.ic_media_play);
-                    SyncUtils.updateSyncFrequency(this,SyncUtils.getSyncFrequency(this));
+                    SyncUtils.updateSyncFrequency(this, SyncUtils.getSyncFrequency(this));
                     stopService(serviceIntent);
                 }
                 return true;
@@ -519,22 +526,26 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+
     /**
      * Check to see if the app has permission to get accounts on the device. This is considered a dangerous
      * permission as of API 23 and requires us to ask for permission explicitly at runtime.
+     *
      * @return True if we have permission.
      */
     private boolean hasGetAccountsPermission() {
-        return AndroidUtils.hasPermission(this,Manifest.permission.GET_ACCOUNTS,this);
+        return AndroidUtils.hasPermission(this, Manifest.permission.GET_ACCOUNTS, this);
     }
+
 
     /**
      * Check to see if the app has permission to draw the overlay. This is considered a dangerous
      * permission as of API 23 and requires us to ask for permission explicitly at runtime.
+     *
      * @return True if we have permission.
      */
     private boolean hasDrawOverAppsPermission() {
-        return AndroidUtils.hasPermission(this,Manifest.permission.SYSTEM_ALERT_WINDOW,this);
+        return AndroidUtils.hasPermission(this, Manifest.permission.SYSTEM_ALERT_WINDOW, this);
     }
 
 
@@ -548,7 +559,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             if (isDeviceOnline()) {
                 ArrayList<GmailAccount> accs = GmailUtils.getGmailAccounts(this);
                 if (accs == null || accs.isEmpty()) {
-                    Log.d(TAG,"No accounts logged in. Pick an account.");
+                    Log.d(TAG, "No accounts logged in. Pick an account.");
                     chooseAccount();
                 }
             } else {
@@ -556,6 +567,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             }
         }
     }
+
 
     /**
      * Perform manual sync
@@ -565,8 +577,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
             if (!isDeviceOnline()) {
                 Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
             } else {
-                String acc = GmailUtils.getGmailAccount(this,mSelectedAccount);
-                if (acc == null ) {
+                String acc = GmailUtils.getGmailAccount(this, mSelectedAccount);
+                if (acc == null) {
                     return;
                 }
                 if (SyncUtils.isSyncEnabled(this, acc)) {
@@ -588,6 +600,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         startActivityForResult(credential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
     }
 
+
     /**
      * Checks whether the device currently has a network connection.
      *
@@ -599,6 +612,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
     }
+
 
     /**
      * Check that Google Play services APK is installed and up to date. Will
@@ -619,6 +633,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
         return true;
     }
+
 
     /**
      * Display an error dialog showing that Google Play Services is missing
@@ -641,9 +656,11 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
     }
 
+
     /**
      * This is a getter to retrieve the context of this activity. Useful for inner classes where the
      * activities getContext is not in-scope.
+     *
      * @return Current Activity's context
      */
     private Context getContext() {
@@ -655,7 +672,8 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
      * This is called when a new Loader needs to be created. The loader does heavy lifting for
      * checking our dataset in the background. If it has changed it hands off the cursor to our
      * lists adapter which then updates the list to show the new data.
-     * @param id The ID to give the loader. (We only use one, so ID is not really used.)
+     *
+     * @param id   The ID to give the loader. (We only use one, so ID is not really used.)
      * @param args The args to pass to the created loader
      * @return A loader cursor
      */
@@ -664,7 +682,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // This is called when a new Loader needs to be created.
         switch (id) {
             case MESSAGES_LOADER_ID:
-                Log.d(TAG,"Created message loader");
+                Log.d(TAG, "Created message loader");
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -689,7 +707,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         new String[]{"_id", IrisContentProvider.SUBJECT, IrisContentProvider.FROM, IrisContentProvider.DATE}, selection, selectionArgs,
                         null);
             case ACCOUNT_LOADER_ID:
-                Log.d(TAG,"Created account loader");
+                Log.d(TAG, "Created account loader");
                 return new CursorLoader(this, IrisContentProvider.ACCOUNT_URI,
                         new String[]{"_id", IrisContentProvider.USER_ID, IrisContentProvider.USER_TOKEN, IrisContentProvider.CURR_HIST_ID}, null, null,
                         null);
@@ -701,10 +719,12 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
     }
 
+
     /**
      * Called when a loader is done loading. Here is where we pass the new data to our list adapter.
+     *
      * @param loader The loader that finished.
-     * @param data The new data that was found.
+     * @param data   The new data that was found.
      */
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
@@ -732,8 +752,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+
     /**
      * This is called when the last Cursor provided to onLoadFinished() above is about to be closed.
+     *
      * @param loader The loader to reset
      */
     @Override
@@ -749,13 +771,20 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         }
     }
 
+
+    /**
+     * Load the messages for the currently selected gmail account
+     * @param itemPosition The item index that was clicked in the dropdown
+     * @param itemId The ID of the item clicked
+     * @return false
+     */
     @Override
     public boolean onNavigationItemSelected(int itemPosition, long itemId) {
         mSelectedAccount = itemPosition;
         Bundle args = new Bundle();
-        String userID = GmailUtils.getGmailAccount(this,itemPosition);
+        String userID = GmailUtils.getGmailAccount(this, itemPosition);
         mSelectedAccountName = userID;
-        args.putString(IrisContentProvider.USER_ID,userID);
+        args.putString(IrisContentProvider.USER_ID, userID);
         getSupportLoaderManager().restartLoader(MESSAGES_LOADER_ID, args, this);
         return false;
     }

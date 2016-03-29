@@ -20,6 +20,7 @@ public class IrisVoiceServiceTest extends AndroidTestCase {
     @Rule
     public final ServiceTestRule mServiceRule = new ServiceTestRule();
 
+
     @Test
     public void testIrisVoiceService() throws TimeoutException {
         // Create the service Intent.
@@ -27,8 +28,8 @@ public class IrisVoiceServiceTest extends AndroidTestCase {
                 new Intent(InstrumentationRegistry.getTargetContext(), IrisVoiceService.class);
 
         // Data can be passed to the service via the Intent.
-        serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGE_ACCOUNTS, new String[]{"testemail1@google.com","testemail2@google.com"});
-        serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGES_ADDED, new String[]{"12345","6789"});
+        serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGE_ACCOUNTS, new String[]{"testemail1@google.com", "testemail2@google.com"});
+        serviceIntent.putExtra(IrisVoiceService.INTENT_DATA_MESSAGES_ADDED, new String[]{"12345", "6789"});
 
         // Bind the service and grab a reference to the binder.
         mServiceRule.startService(serviceIntent);

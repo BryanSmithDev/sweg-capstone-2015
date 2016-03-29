@@ -30,37 +30,42 @@ import java.util.Set;
  */
 public class PrefUtils {
 
-    private static final String TAG = PrefUtils.class.getSimpleName(); //LOG TAG
-
     //Preference File Name
     public static final String PREFS_NAME = "Settings";
+    private static final String TAG = PrefUtils.class.getSimpleName(); //LOG TAG
 
-    private PrefUtils() {}
+
+    private PrefUtils() {
+    }
+
 
     /**
      * Gets a SharedPreferences object from the application preferences file.
+     *
      * @param context the context
      * @return A shared preferences object loaded from the preferences file PREFS_NAME
      */
-    public static SharedPreferences getSharedPreferences(Context context){
+    public static SharedPreferences getSharedPreferences(Context context) {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
+
 
     /**
      * Gets a preference key
      *
      * @param context the context
-     * @param keyId the key id
+     * @param keyId   the key id
      */
     public static String getKey(Context context, int keyId) {
         return context.getString(keyId);
     }
 
+
     /**
      * Gets a boolean preference value.
      *
-     * @param context the context
-     * @param keyId the key id
+     * @param context      the context
+     * @param keyId        the key id
      * @param defaultValue the default value
      */
     public static boolean getBoolean(Context context, int keyId, boolean defaultValue) {
@@ -69,12 +74,13 @@ public class PrefUtils {
         return sharedPreferences.getBoolean(getKey(context, keyId), defaultValue);
     }
 
+
     /**
      * Sets a boolean preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the value
+     * @param keyId   the key id
+     * @param value   the value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setBoolean(Context context, int keyId, boolean value) {
@@ -85,11 +91,12 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Gets an integer preference value.
      *
-     * @param context the context
-     * @param keyId the key id
+     * @param context      the context
+     * @param keyId        the key id
      * @param defaultValue the default value
      */
     public static int getInt(Context context, int keyId, int defaultValue) {
@@ -98,12 +105,13 @@ public class PrefUtils {
         return sharedPreferences.getInt(getKey(context, keyId), defaultValue);
     }
 
+
     /**
      * Sets an integer preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the value
+     * @param keyId   the key id
+     * @param value   the value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setInt(Context context, int keyId, int value) {
@@ -114,11 +122,12 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Gets a float preference value.
      *
-     * @param context the context
-     * @param keyId the key id
+     * @param context      the context
+     * @param keyId        the key id
      * @param defaultValue the default value
      */
     public static float getFloat(Context context, int keyId, float defaultValue) {
@@ -127,12 +136,13 @@ public class PrefUtils {
         return sharedPreferences.getFloat(getKey(context, keyId), defaultValue);
     }
 
+
     /**
      * Sets a float preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the value
+     * @param keyId   the key id
+     * @param value   the value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setFloat(Context context, int keyId, float value) {
@@ -143,11 +153,12 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Gets a long preference value.
      *
      * @param context the context
-     * @param keyId the key id
+     * @param keyId   the key id
      */
     public static long getLong(Context context, int keyId) {
         SharedPreferences sharedPreferences = context.getSharedPreferences(
@@ -155,12 +166,13 @@ public class PrefUtils {
         return sharedPreferences.getLong(getKey(context, keyId), -1L);
     }
 
+
     /**
      * Sets a long preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the value
+     * @param keyId   the key id
+     * @param value   the value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setLong(Context context, int keyId, long value) {
@@ -171,11 +183,12 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Gets a string preference value.
      *
-     * @param context the context
-     * @param keyId the key id
+     * @param context      the context
+     * @param keyId        the key id
      * @param defaultValue default value
      */
     public static String getString(Context context, int keyId, String defaultValue) {
@@ -184,12 +197,13 @@ public class PrefUtils {
         return sharedPreferences.getString(getKey(context, keyId), defaultValue);
     }
 
+
     /**
      * Sets a string preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the value
+     * @param keyId   the key id
+     * @param value   the value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setString(Context context, int keyId, String value) {
@@ -200,36 +214,39 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Gets a string set preference value.
      *
      * @param context the context
-     * @param keyId the key id
+     * @param keyId   the key id
      */
     public static String[] getStringSet(Context context, int keyId) {
         return getStringSet(context, keyId, new String[]{""});
     }
 
+
     /**
      * Gets a string preference value.
      *
-     * @param context the context
-     * @param keyId the key id
+     * @param context      the context
+     * @param keyId        the key id
      * @param defaultValue default value
      */
     public static String[] getStringSet(Context context, int keyId, String[] defaultValue) {
         SharedPreferences sharedPreferences = context.getSharedPreferences(
                 PREFS_NAME, Context.MODE_PRIVATE);
         HashSet<String> defValues = Sets.newHashSet(defaultValue);
-        return (String[])(sharedPreferences.getStringSet(getKey(context, keyId), defValues).toArray());
+        return (String[]) (sharedPreferences.getStringSet(getKey(context, keyId), defValues).toArray());
     }
+
 
     /**
      * Sets a string set preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the set value
+     * @param keyId   the key id
+     * @param value   the set value
      */
     @SuppressLint("CommitPrefEdits")
     public static void setStringSet(Context context, int keyId, Set<String> value) {
@@ -240,12 +257,13 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Sets a string set preference value.
      *
      * @param context the context
-     * @param keyId the key id
-     * @param value the values
+     * @param keyId   the key id
+     * @param value   the values
      */
     @SuppressLint("CommitPrefEdits")
     public static void setStringSet(Context context, int keyId, String[] value) {
@@ -257,12 +275,14 @@ public class PrefUtils {
         editor.commit();
     }
 
+
     /**
      * Clear all saved preferences.
+     *
      * @param context the context
      */
     @SuppressLint("CommitPrefEdits")
-    public static void clear(Context context){
+    public static void clear(Context context) {
         SharedPreferences sharedPreferences = context.getSharedPreferences(
                 PREFS_NAME, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();

@@ -49,21 +49,16 @@ import edu.uvawise.iris.utils.GmailUtils;
  */
 public class IrisVoiceService extends Service implements TextToSpeech.OnInitListener {
 
-    private static final String TAG = IrisVoiceService.class.getSimpleName(); //LOG TAG
-
     //Key that defines the messages that are being passed via intent
     public static final String INTENT_DATA_MESSAGES_ADDED = "IntentPassedData_MessagesAdded";
     public static final String INTENT_DATA_MESSAGE_ACCOUNTS = "IntentPassedData_AccountsAdded";
-
+    private static final String TAG = IrisVoiceService.class.getSimpleName(); //LOG TAG
     private static boolean isRunning = false; //Is the service running?
-
-    private TextToSpeech textToSpeech; //Our text to speech engine. Does the talking.
-
     //Objects needed for creating MimeMessages
     private final Properties props = new Properties();
     private final Session session = Session.getDefaultInstance(props, null);
     private final JsonFactory JSON_FACTORY = new JacksonFactory();
-
+    private TextToSpeech textToSpeech; //Our text to speech engine. Does the talking.
     //Handle Notifications and the overlay.
     private WindowManager windowManager;
     private NotificationManager mNotificationManager;
@@ -85,61 +80,16 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     //Message observer that listens for new messages.
     private MessagesObserver messagesObserver = new MessagesObserver(new Handler());
 
-    private class Message {
-        private String ID;
-        private String userID;
-        private String from;
-        private String subject;
-        private String body;
 
-        public Message(String ID, String userID, String from, String subject, String body) {
-            setID(ID);
-            setUserID(userID);
-            setFrom(from);
-            setSubject(subject);
-            setBody(body);
-        }
-
-        public String getID() {
-            return ID;
-        }
-
-        public void setID(String ID) {
-            this.ID = ID;
-        }
-
-        public String getUserID() {
-            return userID;
-        }
-
-        public void setUserID(String userID) {
-            this.userID = userID;
-        }
-
-        public String getFrom() {
-            return from;
-        }
-
-        public void setFrom(String from) {
-            this.from = from;
-        }
-
-        public String getSubject() {
-            return subject;
-        }
-
-        public void setSubject(String subject) {
-            this.subject = subject;
-        }
-
-        public String getBody() {
-            return body;
-        }
-
-        public void setBody(String body) {
-            this.body = body;
-        }
+    /**
+     * Is the service running?
+     *
+     * @return True if yes. Otherwise, false.
+     */
+    public static boolean isRunning() {
+        return isRunning;
     }
+
 
     /**
      * Ran when the services is created.
@@ -172,16 +122,18 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
-        if (ActivityCompat.checkSelfPermission(getApplicationContext(),Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.SYSTEM_ALERT_WINDOW) == PackageManager.PERMISSION_GRANTED) {
             windowManager.addView(root, params); //Add the overlay to the window.
         }
 
     }
 
+
     /**
      * Ran when an activity explicit calls startService()
-     * @param intent The intent sent
-     * @param flags The flags sent
+     *
+     * @param intent  The intent sent
+     * @param flags   The flags sent
      * @param startId The start id
      * @return
      */
@@ -204,13 +156,13 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 Log.d(TAG, "Got the data on the BG service.");
                 Message msg;
                 Cursor cur = null;
-                String[] proj = {IrisContentProvider.FROM,IrisContentProvider.SUBJECT,IrisContentProvider.SNIPPET,IrisContentProvider.USER_ID,IrisContentProvider.MESSAGE_ID};
-                String selection = IrisContentProvider.USER_ID + "=? AND "+IrisContentProvider.MESSAGE_ID+"=?";
-                for (int i=0;i<messages.length;i++) {
-                    Log.d(TAG,accounts[i]+" "+messages[i]);
-                    cur = getContentResolver().query(IrisContentProvider.MESSAGES_URI, proj, selection, new String[]{accounts[i],messages[i]}, null);
+                String[] proj = {IrisContentProvider.FROM, IrisContentProvider.SUBJECT, IrisContentProvider.SNIPPET, IrisContentProvider.USER_ID, IrisContentProvider.MESSAGE_ID};
+                String selection = IrisContentProvider.USER_ID + "=? AND " + IrisContentProvider.MESSAGE_ID + "=?";
+                for (int i = 0; i < messages.length; i++) {
+                    Log.d(TAG, accounts[i] + " " + messages[i]);
+                    cur = getContentResolver().query(IrisContentProvider.MESSAGES_URI, proj, selection, new String[]{accounts[i], messages[i]}, null);
                     if (cur != null && cur.moveToNext()) {
-                        msg = new Message(messages[i],accounts[i],cur.getString(0),cur.getString(1),cur.getString(2));
+                        msg = new Message(messages[i], accounts[i], cur.getString(0), cur.getString(1), cur.getString(2));
                         queuedMessages.add(msg);
                     }
                 }
@@ -220,6 +172,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         }
         return START_STICKY; // Run until explicitly stopped.
     }
+
 
     /**
      * Ran when the service is explicitly stopped by the app or the OS.
@@ -241,8 +194,10 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         Log.i(TAG, "Service Stopped.");
     }
 
+
     /**
      * Unused but required due to inheritance.
+     *
      * @param intent
      * @return
      */
@@ -253,9 +208,9 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     }
 
 
-
     /**
      * Called when the text to speech engine is initialized.
+     *
      * @param status the engine status code
      */
     @Override
@@ -281,13 +236,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         }
     }
 
-    /**
-     * Is the service running?
-     * @return True if yes. Otherwise, false.
-     */
-    public static boolean isRunning() {
-        return isRunning;
-    }
 
     /**
      * Read the current message in the overlay.
@@ -295,20 +243,21 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
     private void readCurrentMessage() {
         //Only try to read if we have messages in the queue. Derp.
         if (queuedMessages.size() >= 1) {
-                //Set overlay data and read
-                fromView.setText(queuedMessages.get(0).getFrom());
-                subjectView.setText(queuedMessages.get(0).getSubject());
-                bodyView.setText(queuedMessages.get(0).getBody());
-                currentMessageID = queuedMessages.get(0).getID();
-                currentMessageAccount = queuedMessages.get(0).getUserID();
-                textToSpeech.speak("New email from: " + queuedMessages.get(0).getFrom(), TextToSpeech.QUEUE_ADD, null);
-                textToSpeech.speak("Subject: " + queuedMessages.get(0).getSubject(), TextToSpeech.QUEUE_ADD, null);
-                textToSpeech.speak("Body: " + queuedMessages.get(0).getBody(), TextToSpeech.QUEUE_ADD, null);
+            //Set overlay data and read
+            fromView.setText(queuedMessages.get(0).getFrom());
+            subjectView.setText(queuedMessages.get(0).getSubject());
+            bodyView.setText(queuedMessages.get(0).getBody());
+            currentMessageID = queuedMessages.get(0).getID();
+            currentMessageAccount = queuedMessages.get(0).getUserID();
+            textToSpeech.speak("New email from: " + queuedMessages.get(0).getFrom(), TextToSpeech.QUEUE_ADD, null);
+            textToSpeech.speak("Subject: " + queuedMessages.get(0).getSubject(), TextToSpeech.QUEUE_ADD, null);
+            textToSpeech.speak("Body: " + queuedMessages.get(0).getBody(), TextToSpeech.QUEUE_ADD, null);
 
         } else {
             root.setVisibility(View.GONE); //If no messages hide the overlay.
         }
     }
+
 
     /**
      * Display a notification in the notification bar while service is running.
@@ -348,10 +297,11 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
 
     }
 
+
     /**
      * Setup the layout and views for the message overlay.
      */
-    private void setupOverlay(){
+    private void setupOverlay() {
         LayoutInflater inflater =
                 (LayoutInflater) this.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
@@ -390,7 +340,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 queuedMessages.remove(0);
                 readCurrentMessage();
                 if (currentMessageID != null && !currentMessageID.equals(""))
-                    GmailUtils.removeLabelFromMessage(getApplicationContext(),currentMessageAccount,
+                    GmailUtils.removeLabelFromMessage(getApplicationContext(), currentMessageAccount,
                             currentMessageID,
                             "UNREAD");
             }
@@ -403,7 +353,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                 queuedMessages.remove(0);
                 readCurrentMessage();
                 if (currentMessageID != null && !currentMessageID.equals("")) {
-                    GmailUtils.deleteMessage(getApplicationContext(),currentMessageAccount, currentMessageID);
+                    GmailUtils.deleteMessage(getApplicationContext(), currentMessageAccount, currentMessageID);
                     ContentResolver contentResolver = getContentResolver();
                     int result = contentResolver.delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.MESSAGE_ID + " = ?", new String[]{currentMessageID});
                     Log.d(TAG, "Deleted: " + result);
@@ -416,6 +366,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         });
 
     }
+
 
     /**
      * Observer that watches for new messages and adds them to the queue.
@@ -431,6 +382,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             this.onChange(selfChange, null);
         }
 
+
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             //If we have queued messages, show the overlay and start reading.
@@ -444,6 +396,77 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             } catch (Throwable t) {
                 Log.e(TAG, "Error when checking for incoming email.", t);
             }
+        }
+    }
+
+    /**
+     * Simple class to hold our email message data temporarily. This is the data that will be
+     * displayed on the overlay.
+     */
+    private class Message {
+        private String ID;
+        private String userID;
+        private String from;
+        private String subject;
+        private String body;
+
+
+        public Message(String ID, String userID, String from, String subject, String body) {
+            setID(ID);
+            setUserID(userID);
+            setFrom(from);
+            setSubject(subject);
+            setBody(body);
+        }
+
+
+        public String getID() {
+            return ID;
+        }
+
+
+        public void setID(String ID) {
+            this.ID = ID;
+        }
+
+
+        public String getUserID() {
+            return userID;
+        }
+
+
+        public void setUserID(String userID) {
+            this.userID = userID;
+        }
+
+
+        public String getFrom() {
+            return from;
+        }
+
+
+        public void setFrom(String from) {
+            this.from = from;
+        }
+
+
+        public String getSubject() {
+            return subject;
+        }
+
+
+        public void setSubject(String subject) {
+            this.subject = subject;
+        }
+
+
+        public String getBody() {
+            return body;
+        }
+
+
+        public void setBody(String body) {
+            this.body = body;
         }
     }
 }

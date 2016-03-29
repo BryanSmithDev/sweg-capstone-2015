@@ -88,7 +88,6 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     private List<String> newMessageAccounts = new ArrayList<>();
 
 
-
     /**
      * Constructor. Obtains handle to content resolver for later use.
      */
@@ -96,6 +95,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         super(context, autoInitialize);
         this.context = context;
     }
+
 
     /**
      * Constructor. Obtains handle to content resolver for later use.
@@ -105,6 +105,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         super(context, autoInitialize, allowParallelSyncs);
         this.context = context;
     }
+
 
     /**
      * Called by the Android system in response to a request to run the sync adapter. The work
@@ -124,23 +125,15 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(final Account account, Bundle extras, String authority,
                               ContentProviderClient provider, SyncResult syncResult) {
-        Log.i(TAG, "Beginning synchronization for: "+account.name);
+        Log.i(TAG, "-------------------------------------------------------" + account.name);
+        Log.i(TAG, "Beginning synchronization for: " + account.name);
+        Log.i(TAG, "-------------------------------------------------------" + account.name);
 
-
-       // if (!GmailUtils.isSyncing(context)) {
-      //      Log.d(TAG, "Syncing is turned off.");
-       //     return;
-       // }
-
-        if (account == null) {
-            Log.d(TAG, "Passed Account is null");
-            return;
-        }
 
         ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
 
-        if (accounts.isEmpty()){
-            Log.e(TAG,"Can't sync. No accounts.");
+        if (accounts == null || accounts.isEmpty()) {
+            Log.e(TAG, "Can't sync. No accounts.");
             return;
         }
 
@@ -192,13 +185,16 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 credential = null;
             }
             Log.i(TAG, "Synchronization complete for:" + account.name);
+            Log.i(TAG, "-------------------------------------------------------" + account.name);
         }
 
     }
 
+
     /**
      * We have never synced or can't use the current history ID. We need to do a full sync with
      * the server.
+     *
      * @param credential Google crediential to use to sync with.
      * @throws MessagingException
      * @throws IOException
@@ -208,7 +204,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         final ContentResolver contentResolver = context.getContentResolver();
         String userID = credential.getSelectedAccountName();
 
-        contentResolver.delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID+" = ?", new String[] {userID});
+        contentResolver.delete(IrisContentProvider.MESSAGES_URI, IrisContentProvider.USER_ID + " = ?", new String[]{userID});
 
         Gmail.Users.Messages.List mailList = gmail.users().messages().list("me")
                 .setFields("messages(id,historyId)")
@@ -223,7 +219,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         BigInteger newHistID = null;
         BigInteger temp = null;
         for (Message msgID : response.getMessages()) {
-            temp = addMessage(credential,msgID.getId(), batch);
+            temp = addMessage(credential, msgID.getId(), batch);
             if (newHistID == null) newHistID = temp;
         }
 
@@ -239,10 +235,12 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
+
     /**
      * Get the history list of the specified history ID
+     *
      * @param credential The Google Credential to sync with
-     * @param histID The history ID to get the list of.
+     * @param histID     The history ID to get the list of.
      * @return the history list response object.
      * @throws IOException
      */
@@ -250,10 +248,12 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         return getHistoryResponse(credential, histID, null);
     }
 
+
     /**
      * Get the history list of the specified history ID
+     *
      * @param credential The Google Credential to sync with
-     * @param histID The history ID to get the list of.
+     * @param histID     The history ID to get the list of.
      * @return the history list response object.
      * @throws IOException
      */
@@ -281,8 +281,10 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         }
     }
 
+
     /**
      * Determine if we can do a partial sync or not.
+     *
      * @param credential The Google Credential to use to sync.
      * @return True if we can use partial sync. False otherwise.
      * @throws IOException
@@ -301,8 +303,10 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         return false;
     }
 
+
     /**
      * Perform a partial sync with the Gmail server.
+     *
      * @param credential The Google Credential to sync with.
      * @throws MessagingException
      * @throws IOException
@@ -376,7 +380,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     deleteMessage(msgID.getId(), batch);
                 }
 
-                GmailUtils.setCurrentHistoryID(context,userID, newHistID);
+                GmailUtils.setCurrentHistoryID(context, userID, newHistID);
                 if (IrisVoiceService.isRunning() && newMessages != null && !newMessages.isEmpty()) {
                     Log.d(TAG, "Putting new messages in the intent.");
                     Intent serviceIntent = new Intent(context, IrisVoiceService.class);
@@ -409,12 +413,14 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
 
     }
 
+
     /**
      * Get the message with the specified ID from the Gmail server and add it to the database
      * batch operations.
+     *
      * @param credential The Google Credential to sync with
-     * @param msgID The message ID to add.
-     * @param batch The array that is holding the database batch operations.
+     * @param msgID      The message ID to add.
+     * @param batch      The array that is holding the database batch operations.
      * @return Returns the history ID of the message added.
      * @throws IOException
      * @throws MessagingException
@@ -428,7 +434,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
         try {
             message = gmail.users().messages().get("me", msgID).setFormat("raw").setFields("historyId,id,internalDate,labelIds,raw,snippet").execute();
         } catch (GoogleJsonResponseException e) {
-            Log.d(TAG, "Message no longer exists: " + msgID + " - "+e.getMessage());
+            Log.d(TAG, "Message no longer exists: " + msgID + " - " + e.getMessage());
             return null;
         }
         if (message == null) return null;
@@ -474,8 +480,11 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     }
 
     //TODO: Check if need filter delete based on account ID
+
+
     /**
      * Add a delete message operation to the specified database batch.
+     *
      * @param msgID The ID of the message to delete.
      * @param batch The array that is holding the database batch operations.
      * @return True

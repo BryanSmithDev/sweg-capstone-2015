@@ -8,8 +8,11 @@ import edu.uvawise.iris.sync.GmailAccountTest;
 import edu.uvawise.iris.utils.GmailUtilsTest;
 import edu.uvawise.iris.utils.PrefUtilsTest;
 
-// Runs all unit tests.
+/**
+ * Runs all unit tests for Iris
+ */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({GmailAccountTest.class,
-        IrisVoiceServiceTest.class, PrefUtilsTest.class,GmailUtilsTest.class})
-public class ApplicationTest {}
+        IrisVoiceServiceTest.class, PrefUtilsTest.class, GmailUtilsTest.class})
+public class ApplicationTest {
+}

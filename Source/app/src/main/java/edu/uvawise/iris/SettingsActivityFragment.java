@@ -28,8 +28,10 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
     public SettingsActivityFragment() {
     }
 
+
     /**
      * Called when the fragment is created. We will setup most of our objects here.
+     *
      * @param savedInstanceState The saved state of the fragment if available.
      */
     @Override
@@ -71,6 +73,7 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         });
     }
 
+
     /**
      * Make sure to re-register the shared preferences change listener when resuming.
      */
@@ -81,6 +84,7 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         getPreferenceScreen().getSharedPreferences()
                 .registerOnSharedPreferenceChangeListener(this);
     }
+
 
     /**
      * Make sure to un-register the shared preference change listener on pause.
@@ -94,10 +98,12 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
                 .unregisterOnSharedPreferenceChangeListener(this);
     }
 
+
     /**
      * Called when shared preferences are changed.
+     *
      * @param sharedPreferences The shared preferences group that where changed.
-     * @param key The key of the preference changed
+     * @param key               The key of the preference changed
      */
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
@@ -117,6 +123,7 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
 
     /**
      * Setup the initial summary of each preference based on saved preference value.
+     *
      * @param p The preference to set the summary of.
      */
     private void initSummary(Preference p) {
@@ -128,12 +135,13 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         } else {
             updatePrefSummary(p);
         }
-        setLogoutPreference();
     }
+
 
     /**
      * Sets the summary of the preference based on the selected value. Customized per preference
      * type
+     *
      * @param p The preference to set the summary of.
      */
     private void updatePrefSummary(Preference p) {
@@ -153,19 +161,6 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
             EditTextPreference editTextPref = (EditTextPreference) p;
             p.setSummary(editTextPref.getText());
         }
-        setLogoutPreference();
     }
 
-    /**
-     * Sets the title and summary of the Logout Preference based on if there is a logged in account
-     * or not.
-     */
-    private void setLogoutPreference() {
-       /** String acc = GmailUtils.getGmailAccountName(context);
-        Preference p = findPreference("logout");
-        if (p == null) return;
-        if (acc.equals("")) p.setTitle("Login");
-        else p.setTitle("Logout");
-        p.setSummary(acc); **/
-    }
 }
