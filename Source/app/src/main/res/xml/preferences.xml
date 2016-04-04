@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-
+    <PreferenceCategory android:title="@string/pref_cat_general" >
     <CheckBoxPreference
         android:defaultValue="false"
         android:key="@string/pref_keep_screen_on_key"
@@ -9,16 +9,34 @@
 
 
     <ListPreference
-        android:defaultValue='3'
+        android:defaultValue='1'
+        android:entries="@array/service_sync_freqs"
+        android:entryValues="@array/service_sync_freqs_values"
+        android:key="@string/service_pref_sync_freq_key"
+        android:summary="@string/service_pref_sync_freq_summary"
+        android:title="@string/service_pref_sync_freq_title" />
+
+    <ListPreference
+        android:defaultValue='120'
         android:entries="@array/sync_freqs"
         android:entryValues="@array/sync_freqs_values"
         android:key="@string/pref_sync_freq_key"
         android:summary="@string/pref_sync_freq_summary"
         android:title="@string/pref_sync_freq_title" />
 
-    <Preference
-        android:key="logout"
-        android:title="Login"></Preference>
+    </PreferenceCategory>
 
+
+    <PreferenceCategory android:title="@string/pref_cat_accounts" >
+        <Preference
+        android:key="addAccount"
+        android:title="Add Account" />
+    <PreferenceScreen
+        android:key="logout"
+        android:title="Logout of an Account">
+
+
+    </PreferenceScreen>
+    </PreferenceCategory>
 
 </PreferenceScreen>

@@ -4,9 +4,10 @@ import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.ContentResolver;
 import android.content.Context;
-
 import android.os.Bundle;
+import android.util.Log;
 
+import java.util.ArrayList;
 
 import edu.uvawise.iris.R;
 import edu.uvawise.iris.utils.GmailUtils;
@@ -18,12 +19,12 @@ import edu.uvawise.iris.utils.PrefUtils;
  */
 public class SyncUtils {
 
-    private static final String TAG = SyncUtils.class.getSimpleName();
-    private static final int SYNC_FREQUENCY_DEFAULT = 3;
-
     //Sync Authorities.
     public static final String ACCOUNT_TYPE = "com.google";
     public static final String SYNC_AUTH = "edu.uvawise.iris.sync";
+    private static final String TAG = SyncUtils.class.getSimpleName();
+    private static final int SYNC_FREQUENCY_DEFAULT = 120;
+    private static final int SERVICE_SYNC_FREQUENCY_DEFAULT = 1;
 
 
     /**
@@ -33,30 +34,40 @@ public class SyncUtils {
      */
     public static void syncNow(Context context) {
         Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
-        String googleAccount = GmailUtils.getGmailAccountName(context);
+        ArrayList<GmailAccount> googleAccounts = GmailUtils.getGmailAccounts(context);
+
+        if (googleAccounts == null || googleAccounts.isEmpty()) return;
+
         Bundle b = new Bundle();
         // Disable sync backoff and ignore sync preferences. In other words...perform sync NOW!
         b.putBoolean(ContentResolver.SYNC_EXTRAS_MANUAL, true);
         b.putBoolean(ContentResolver.SYNC_EXTRAS_EXPEDITED, true);
 
         for (Account account : accounts) {
-            if (account.name.equals(googleAccount)) {
-                ContentResolver.requestSync(account, SyncUtils.SYNC_AUTH, b);
-                break;
+            for (GmailAccount gAccount : googleAccounts) {
+                if (account.name.equals(gAccount.getUserID()))
+                    ContentResolver.requestSync(account, SyncUtils.SYNC_AUTH, b);
             }
         }
     }
+
 
     /**
      * Disables syncing.
      *
      * @param context The context to run in.
      */
-    public static void disableSync(Context context) {
-        GmailUtils.setIsSyncing(context,false);
-        disableSyncForAll(context);
-
+    public static void disableSync(Context context, String accountName) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
+        for (Account account : accounts) {
+            if (accountName.equals(account.name)) {
+                ContentResolver.cancelSync(account, SyncUtils.SYNC_AUTH);
+                ContentResolver.setIsSyncable(account, SyncUtils.SYNC_AUTH, 0);
+                ContentResolver.setSyncAutomatically(account, SyncUtils.SYNC_AUTH, false);
+            }
+        }
     }
+
 
     /**
      * Disables syncing for all accounts.
@@ -71,6 +82,7 @@ public class SyncUtils {
             ContentResolver.setSyncAutomatically(account, SyncUtils.SYNC_AUTH, false);
         }
     }
+
 
     /**
      * Returns true if currently syncing
@@ -87,23 +99,46 @@ public class SyncUtils {
         return false;
     }
 
+
     /**
-     * Check if sync is enabled.
+     * Check if sync is enabled for an account.
      *
      * @param context The context to run in.
      */
-    public static boolean isSyncEnabled(Context context) {
-        Account[] am = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
+    public static boolean isSyncEnabled(Context context, String userID) {
+        Account[] accounts = AccountManager.get(context).getAccountsByType(SyncUtils.ACCOUNT_TYPE);
+
         if (!GmailUtils.isSyncing(context)) return false;
-        for (Account account : am) {
-            if (GmailUtils.getGmailAccountName(context).equals(account.name)) {
+
+        for (Account account : accounts) {
+            if (userID.equals(account.name)) {
                 boolean isYourAccountSyncEnabled = ContentResolver.getSyncAutomatically(account, SyncUtils.SYNC_AUTH);
                 boolean isMasterSyncEnabled = ContentResolver.getMasterSyncAutomatically();
                 if (isMasterSyncEnabled && isYourAccountSyncEnabled) return true;
             }
+
         }
         return false;
     }
+
+
+    /**
+     * Check if sync is enabled for all accounts.
+     *
+     * @param context The context to run in.
+     */
+    public static boolean isSyncEnabled(Context context) {
+        ArrayList<GmailAccount> googleAccounts = GmailUtils.getGmailAccounts(context);
+
+        if (googleAccounts == null || googleAccounts.isEmpty()) return false;
+
+        for (GmailAccount gAccount : googleAccounts) {
+            if (!isSyncEnabled(context, gAccount.getUserID())) return false;
+        }
+
+        return true;
+    }
+
 
     /**
      * Enables syncing.
@@ -111,22 +146,24 @@ public class SyncUtils {
      * @param context The context to run in.
      */
     public static void enableSync(Context context) {
-        GmailUtils.setIsSyncing(context,true);
+        GmailUtils.setIsSyncing(context, true);
         disableSyncForAll(context);
         ContentResolver.setMasterSyncAutomatically(true);
 
-        // Enable sync for account
-        String googleAccount = GmailUtils.getGmailAccountName(context);
+        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
 
-        enableSyncForAccount(context, new Account(googleAccount, SyncUtils.ACCOUNT_TYPE));
+        for (GmailAccount gmailAccount : accounts) {
+            enableSyncForAccount(context, new Account(gmailAccount.getUserID(), SyncUtils.ACCOUNT_TYPE));
+        }
     }
+
 
     /**
      * Enables syncing for an account.
      *
      * @param account The account to enable syncing for.
      */
-    private static void enableSyncForAccount(Context context, Account account) {
+    public static void enableSyncForAccount(Context context, Account account) {
         int min = getSyncFrequency(context);
         // Inform the system that this account supports sync
         ContentResolver.setIsSyncable(account, SyncUtils.SYNC_AUTH, 1);
@@ -138,13 +175,44 @@ public class SyncUtils {
                 account, SyncUtils.SYNC_AUTH, new Bundle(), 60 * min);
     }
 
+
+    /**
+     * Updates current syncing freq for each account.
+     *
+     * @param min The frequency to use in minutes
+     */
+    public static void updateSyncFrequency(Context context, int min) {
+        ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
+        if (accounts == null || accounts.isEmpty()) return;
+        for (GmailAccount account : accounts) {
+            if (isSyncEnabled(context, account.getUserID())) {
+                Account acc = new Account(account.getUserID(), ACCOUNT_TYPE);
+                ContentResolver.addPeriodicSync(acc, SYNC_AUTH, new Bundle(), 60 * min);
+                Log.i(TAG, "Updated " + account.getUserID() + "'s sync freq to " + min + " mins");
+            }
+        }
+    }
+
+
     /**
      * Gets the currently saved sync frequency from preferences
+     *
      * @param context The context to use to retrieve the preferences
      * @return Integer value saved for the sync frequency, or the default value.
      */
-    private static int getSyncFrequency(Context context){
-        return Integer.parseInt(PrefUtils.getString(context,R.string.pref_sync_freq_key,SYNC_FREQUENCY_DEFAULT+""));
+    public static int getSyncFrequency(Context context) {
+        return Integer.parseInt(PrefUtils.getString(context, R.string.pref_sync_freq_key, SYNC_FREQUENCY_DEFAULT + ""));
+    }
+
+
+    /**
+     * Gets the currently saved voice service sync frequency from preferences
+     *
+     * @param context The context to use to retrieve the preferences
+     * @return Integer value saved for the sync frequency, or the default value.
+     */
+    public static int getServiceSyncFrequency(Context context) {
+        return Integer.parseInt(PrefUtils.getString(context, R.string.service_pref_sync_freq_key, SERVICE_SYNC_FREQUENCY_DEFAULT + ""));
     }
 
 }

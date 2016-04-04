@@ -5,4 +5,6 @@
 .DS_Store
 /build
 /captures
+/.navigation
+app.iml
 app-release*.apk
