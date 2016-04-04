@@ -20,23 +20,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-
-        <android.support.v4.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
-            android:id="@+id/swipe_container"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
-
             <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical">
-
-                <ListView
-                    android:id="@+id/emailList"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:animateLayoutChanges="true"
-                    android:listSelector="@drawable/email_list_item_selector" />
+                <android.support.v4.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                                                              android:id="@+id/swipe_container"
+                                                              android:layout_width="match_parent"
+                                                              android:layout_height="match_parent">
+                    <ListView
+                        android:id="@+id/emailList"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:animateLayoutChanges="true"
+                        android:listSelector="@drawable/email_list_item_selector" />
+                </android.support.v4.widget.SwipeRefreshLayout>
 
                 <TextView
                     android:id="@+id/empty_list_item"
@@ -47,6 +45,5 @@
                     android:textColor="@color/secondary_text"
                     android:visibility="gone"></TextView>
             </LinearLayout>
-        </android.support.v4.widget.SwipeRefreshLayout>
     </android.support.design.widget.CoordinatorLayout>
 </LinearLayout>
