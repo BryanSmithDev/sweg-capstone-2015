@@ -242,6 +242,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
      * Read the current message in the overlay.
      */
     private void readCurrentMessage() {
+        textToSpeech.stop();
         //Only try to read if we have messages in the queue. Derp.
         if (queuedMessages.size() >= 1) {
             //Set overlay data and read
@@ -250,6 +251,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             bodyView.setText(Html.fromHtml((String) queuedMessages.get(0).getBody()).toString());
             currentMessageID = queuedMessages.get(0).getID();
             currentMessageAccount = queuedMessages.get(0).getUserID();
+            textToSpeech.stop();
             textToSpeech.speak("New email from: " + queuedMessages.get(0).getFrom(), TextToSpeech.QUEUE_ADD, null);
             textToSpeech.speak("Subject: " + queuedMessages.get(0).getSubject(), TextToSpeech.QUEUE_ADD, null);
             textToSpeech.speak("Body: " + queuedMessages.get(0).getBody(), TextToSpeech.QUEUE_ADD, null);
@@ -339,11 +341,13 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
-                readCurrentMessage();
+
                 if (currentMessageID != null && !currentMessageID.equals(""))
                     GmailUtils.removeLabelFromMessage(getApplicationContext(), currentMessageAccount,
                             currentMessageID,
                             "UNREAD");
+
+                readCurrentMessage();
             }
         });
 
@@ -352,7 +356,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             @Override
             public void onClick(View v) {
                 queuedMessages.remove(0);
-                readCurrentMessage();
+
                 if (currentMessageID != null && !currentMessageID.equals("")) {
                     GmailUtils.deleteMessage(getApplicationContext(), currentMessageAccount, currentMessageID);
                     ContentResolver contentResolver = getContentResolver();
@@ -363,6 +367,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
                             null,                           // No local observer
                             false);
                 }
+                readCurrentMessage();
             }
         });
 
