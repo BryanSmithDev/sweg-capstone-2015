@@ -19,6 +19,7 @@ import android.speech.tts.TextToSpeech;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.NotificationCompat;
+import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -246,7 +247,7 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             //Set overlay data and read
             fromView.setText(queuedMessages.get(0).getFrom());
             subjectView.setText(queuedMessages.get(0).getSubject());
-            bodyView.setText(queuedMessages.get(0).getBody());
+            bodyView.setText(Html.fromHtml((String) queuedMessages.get(0).getBody()).toString());
             currentMessageID = queuedMessages.get(0).getID();
             currentMessageAccount = queuedMessages.get(0).getUserID();
             textToSpeech.speak("New email from: " + queuedMessages.get(0).getFrom(), TextToSpeech.QUEUE_ADD, null);
