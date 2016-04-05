@@ -51,7 +51,6 @@ import com.google.api.services.gmail.model.Message;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.net.SocketTimeoutException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -125,9 +124,10 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
     @Override
     public void onPerformSync(final Account account, Bundle extras, String authority,
                               ContentProviderClient provider, SyncResult syncResult) {
-        Log.i(TAG, "-------------------------------------------------------" + account.name);
+        Log.i(TAG, ".");
+        Log.i(TAG, "-------------------------------------------------------");
         Log.i(TAG, "Beginning synchronization for: " + account.name);
-        Log.i(TAG, "-------------------------------------------------------" + account.name);
+        Log.i(TAG, "-------------------------------------------------------");
 
 
         ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(context);
@@ -167,7 +167,7 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                     } else {
                         performFullSync(credential);
                     }
-                } catch (MessagingException | SocketTimeoutException e) {
+                } catch (MessagingException | IOException e) {
                     Log.e(TAG, "Error Syncing");
                 }
 
@@ -185,7 +185,8 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 credential = null;
             }
             Log.i(TAG, "Synchronization complete for:" + account.name);
-            Log.i(TAG, "-------------------------------------------------------" + account.name);
+            Log.i(TAG, "-------------------------------------------------------");
+            Log.i(TAG, ".");
         }
 
     }

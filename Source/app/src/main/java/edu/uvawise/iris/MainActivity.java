@@ -583,6 +583,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                 }
             } else {
                 Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
+                mSwipeRefreshLayout.setRefreshing(false);
             }
         }
     }
@@ -595,6 +596,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         if (hasGetAccountsPermission()) {
             if (!isDeviceOnline()) {
                 Toast.makeText(getApplicationContext(), R.string.error_no_connection, Toast.LENGTH_LONG).show();
+                mSwipeRefreshLayout.setRefreshing(false);
             } else {
                 String acc = GmailUtils.getGmailAccount(this, mSelectedAccount);
                 if (acc == null) {
