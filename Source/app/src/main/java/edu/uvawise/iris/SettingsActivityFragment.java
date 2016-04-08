@@ -8,12 +8,17 @@ import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.MultiSelectListPreference;
 import android.preference.Preference;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceGroup;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.util.ArrayList;
+
+import edu.uvawise.iris.sync.GmailAccount;
 import edu.uvawise.iris.sync.SyncUtils;
+import edu.uvawise.iris.utils.GmailUtils;
 import edu.uvawise.iris.utils.PrefUtils;
 
 /**
@@ -48,6 +53,19 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
         addPreferencesFromResource(R.xml.preferences);
         initSummary(getPreferenceScreen());
 
+        int accounts = 0;
+        ArrayList<GmailAccount> accs = GmailUtils.getGmailAccounts(context);
+        if(accs != null){
+            accounts = accs.size();
+        }
+
+        Preference mCheckBoxPref = findPreference("logout");
+        PreferenceCategory mCategory = (PreferenceCategory) findPreference(getString(R.string.pref_cat_accounts));
+
+        if (accounts == 0) {
+            mCategory.removePreference(mCheckBoxPref);
+        }
+
         //When our add account preference is clicked, we need to go back to the Main Activity and add an account.
         findPreference("addAccount").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
             @Override
@@ -60,17 +78,20 @@ public class SettingsActivityFragment extends PreferenceFragment implements Shar
             }
         });
 
-        //When our logout preference is clicked, we need to go back to the Main Activity and logout.
-        findPreference("logout").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
-            @Override
-            public boolean onPreferenceClick(Preference preference) {
-                Intent logoutIntent = new Intent(context, MainActivity.class);
-                logoutIntent.putExtra(MainActivity.METHOD_TO_CALL, MainActivity.LOGOUT);
-                logoutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(logoutIntent);
-                return true;
-            }
-        });
+        if (findPreference("logout")!= null) {
+            //When our logout preference is clicked, we need to go back to the Main Activity and logout.
+            findPreference("logout").setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    Intent logoutIntent = new Intent(context, MainActivity.class);
+                    logoutIntent.putExtra(MainActivity.METHOD_TO_CALL, MainActivity.LOGOUT);
+                    logoutIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(logoutIntent);
+                    return true;
+                }
+            });
+        }
+
     }
 
 
