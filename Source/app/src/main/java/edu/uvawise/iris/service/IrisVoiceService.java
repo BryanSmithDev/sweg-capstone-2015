@@ -254,8 +254,8 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
             textToSpeech.stop();
             textToSpeech.speak("New email from: " + queuedMessages.get(0).getFrom(), TextToSpeech.QUEUE_ADD, null);
             textToSpeech.speak("Subject: " + queuedMessages.get(0).getSubject(), TextToSpeech.QUEUE_ADD, null);
-            textToSpeech.speak("Body: " + queuedMessages.get(0).getBody(), TextToSpeech.QUEUE_ADD, null);
-
+            textToSpeech.speak("Body: " + Html.fromHtml((String) queuedMessages.get(0).getBody()).toString(), TextToSpeech.QUEUE_ADD, null);
+            queuedMessages.remove(0);
         } else {
             root.setVisibility(View.GONE); //If no messages hide the overlay.
         }
@@ -320,14 +320,14 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         messageView.setFocusableInTouchMode(false);
         messageView.setFocusable(false);
         messageView.setClickable(false);
-        messageView.setOnTouchListener(new View.OnTouchListener() {
+        /*messageView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 Log.d(TAG, "MessageViewTouch");
                 v.setVisibility(View.GONE);
                 return false;
             }
-        });
+        });*/
 
         //Fetch the Views from the xml.
         fromView = (TextView) messageView.findViewById(R.id.fromTextView);
@@ -340,8 +340,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         keepButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                queuedMessages.remove(0);
-
                 if (currentMessageID != null && !currentMessageID.equals(""))
                     GmailUtils.removeLabelFromMessage(getApplicationContext(), currentMessageAccount,
                             currentMessageID,
@@ -355,8 +353,6 @@ public class IrisVoiceService extends Service implements TextToSpeech.OnInitList
         deleteButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                queuedMessages.remove(0);
-
                 if (currentMessageID != null && !currentMessageID.equals("")) {
                     GmailUtils.deleteMessage(getApplicationContext(), currentMessageAccount, currentMessageID);
                     ContentResolver contentResolver = getContentResolver();

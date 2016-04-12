@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
 
                     ArrayList<GmailAccount> accounts = GmailUtils.getGmailAccounts(this);
                     if (accounts == null || accounts.isEmpty()) {
-                        Toast.makeText(this, "", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Can't log out. No Accounts logged in.", Toast.LENGTH_LONG).show();
                         return;
 
                     }

@@ -27,7 +27,7 @@
     </PreferenceCategory>
 
 
-    <PreferenceCategory android:title="@string/pref_cat_accounts" >
+    <PreferenceCategory android:key="@string/pref_cat_accounts" android:title="@string/pref_cat_accounts" >
         <Preference
         android:key="addAccount"
         android:title="Add Account" />
