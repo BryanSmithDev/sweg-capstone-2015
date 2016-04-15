@@ -30,4 +30,5 @@
     <string name="service_pref_sync_freq_title">Voice Service Sync Frequency</string>
     <string name="service_pref_sync_freq_summary">How often to sync while voice service is running?</string>
     <string name="service_pref_sync_freq_key">pref_service_sync_freq</string>
+    <string name="error_account_already_chosen">Account already in use.</string>
 </resources>

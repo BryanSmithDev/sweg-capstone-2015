@@ -440,15 +440,28 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         data.getExtras() != null) {
                     String accountName =
                             data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                    ArrayList<GmailAccount> accounts =GmailUtils.getGmailAccounts(this);
+                    boolean inUse = false;
                     if (accountName != null) {
                         Log.d(TAG, "Account Picked - " + accountName);
-                        credential.setSelectedAccountName(accountName);
-                        ContentValues values = new ContentValues();
-                        values.put(IrisContentProvider.USER_ID, accountName);
-                        values.put(IrisContentProvider.CURR_HIST_ID, "0");
-                        getContentResolver().insert(IrisContentProvider.ACCOUNT_URI, values);
-                        getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID, null, this);
-                        SyncUtils.enableSync(this);
+
+                        for(GmailAccount acc: accounts){
+                            if (acc.getUserID().equals(accountName)){
+                                inUse = true;
+                                break;
+                            }
+                        }
+                        if (!inUse) {
+                            credential.setSelectedAccountName(accountName);
+                            ContentValues values = new ContentValues();
+                            values.put(IrisContentProvider.USER_ID, accountName);
+                            values.put(IrisContentProvider.CURR_HIST_ID, "0");
+                            getContentResolver().insert(IrisContentProvider.ACCOUNT_URI, values);
+                            getSupportLoaderManager().restartLoader(ACCOUNT_LOADER_ID, null, this);
+                            SyncUtils.enableSync(this);
+                        } else {
+                            Toast.makeText(this, R.string.error_account_already_chosen, Toast.LENGTH_LONG).show();
+                        }
                     }
                 } else if (resultCode == RESULT_CANCELED) {
                     Toast.makeText(this, R.string.error_no_account_chosen, Toast.LENGTH_LONG).show();
