@@ -16,6 +16,7 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
@@ -214,6 +215,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL); //Allow multiple lines to be selected.
         mListView.setEmptyView(findViewById(R.id.empty_list_item)); //This view will be shown when the list is empty
 
+        mListView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int i) {
+
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                if (firstVisibleItem == 0)
+                    mSwipeRefreshLayout.setEnabled(true);
+                else
+                    mSwipeRefreshLayout.setEnabled(false);
+            }
+        });
+
         //This is manages our context bar and actions when a list item is selected via long press.
         mListView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
 
@@ -365,6 +381,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         });
 
 
+
         mAccountsAdapter = new SimpleCursorAdapter(getSupportActionBar().getThemedContext(),
                 android.R.layout.simple_dropdown_item_1line, null,
                 new String[]{IrisContentProvider.USER_ID},
@@ -377,10 +394,49 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         actions.setDisplayShowTitleEnabled(false);
         actions.setListNavigationCallbacks(mAccountsAdapter, this);
 
+        if (savedInstanceState != null) {
+            mSelectedAccount = savedInstanceState.getInt("accountSelected");
+            actions.setSelectedNavigationItem(mSelectedAccount);
+        }
+
+
         // Prepare the loader.  Either re-connect with an existing one,
         // or start a new one.
         getSupportLoaderManager().initLoader(MESSAGES_LOADER_ID, null, this);
         getSupportLoaderManager().initLoader(ACCOUNT_LOADER_ID, null, this);
+    }
+
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("accountSelected",mSelectedAccount);
+    }
+
+
+    /**
+     * This method is called after {@link #onStart} when the activity is
+     * being re-initialized from a previously saved state, given here in
+     * <var>savedInstanceState</var>.  Most implementations will simply use {@link #onCreate}
+     * to restore their state, but it is sometimes convenient to do it here
+     * after all of the initialization has been done or to allow subclasses to
+     * decide whether to use your default implementation.  The default
+     * implementation of this method performs a restore of any view state that
+     * had previously been frozen by {@link #onSaveInstanceState}.
+     * <p/>
+     * <p>This method is called between {@link #onStart} and
+     * {@link #onPostCreate}.
+     *
+     * @param savedInstanceState the data most recently supplied in {@link #onSaveInstanceState}.
+     * @see #onCreate
+     * @see #onPostCreate
+     * @see #onResume
+     * @see #onSaveInstanceState
+     */
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        mSelectedAccount = savedInstanceState.getInt("accountSelected");
     }
 
 
