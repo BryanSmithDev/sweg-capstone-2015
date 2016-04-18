@@ -215,6 +215,21 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         mListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL); //Allow multiple lines to be selected.
         mListView.setEmptyView(findViewById(R.id.empty_list_item)); //This view will be shown when the list is empty
 
+        mListView.setOnScrollListener(new AbsListView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(AbsListView absListView, int i) {
+
+            }
+
+            @Override
+            public void onScroll(AbsListView absListView, int firstVisibleItem, int visibleItemCount, int totalItemCount) {
+                if (firstVisibleItem == 0)
+                    mSwipeRefreshLayout.setEnabled(true);
+                else
+                    mSwipeRefreshLayout.setEnabled(false);
+            }
+        });
+
         //This is manages our context bar and actions when a list item is selected via long press.
         mListView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
 
