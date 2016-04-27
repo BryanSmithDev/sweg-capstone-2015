@@ -116,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                         i++;
                     }
 
-                    AlertDialog.Builder builder1 = new AlertDialog.Builder(this);
+                    AlertDialog.Builder builder1 = new AlertDialog.Builder(this, R.style.AppCompatAlertDialogStyle);
                     // Set the dialog title
                     builder1.setTitle("Pick an account to logout:")
                             .setSingleChoiceItems(names, -1, new DialogInterface.OnClickListener() {
