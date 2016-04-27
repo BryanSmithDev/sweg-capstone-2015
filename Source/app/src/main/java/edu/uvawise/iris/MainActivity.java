@@ -16,7 +16,6 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.LoaderManager;
@@ -49,7 +48,6 @@ import edu.uvawise.iris.service.IrisVoiceService;
 import edu.uvawise.iris.sync.GmailAccount;
 import edu.uvawise.iris.sync.IrisContentProvider;
 import edu.uvawise.iris.sync.SyncUtils;
-import edu.uvawise.iris.utils.AndroidUtils;
 import edu.uvawise.iris.utils.GmailUtils;
 import edu.uvawise.iris.utils.PrefUtils;
 
@@ -404,6 +402,10 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
         // or start a new one.
         getSupportLoaderManager().initLoader(MESSAGES_LOADER_ID, null, this);
         getSupportLoaderManager().initLoader(ACCOUNT_LOADER_ID, null, this);
+
+        if (isGooglePlayServicesAvailable()) {
+            login();
+        }
     }
 
 
@@ -464,9 +466,6 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
     protected void onResume() {
         super.onResume();
         enforceScreenOnFlag();
-        if (isGooglePlayServicesAvailable()) {
-            login();
-        }
     }
 
 
@@ -675,7 +674,14 @@ public class MainActivity extends AppCompatActivity implements LoaderManager.Loa
                     mSwipeRefreshLayout.setRefreshing(true);
                     SyncUtils.syncNow(this);
                 } else {
-                    Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
+                    ArrayList<GmailAccount> accs = GmailUtils.getGmailAccounts(this);
+                    if (accs == null || accs.isEmpty()) {
+                        Toast.makeText(getApplicationContext(), "No accounts logged in. Please add an account.", Toast.LENGTH_LONG).show();
+                        login();
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Sync is disabled. Please enable it via the Android Settings Menu.", Toast.LENGTH_LONG).show();
+                    }
+                    mSwipeRefreshLayout.setRefreshing(false);
                 }
             }
         }
