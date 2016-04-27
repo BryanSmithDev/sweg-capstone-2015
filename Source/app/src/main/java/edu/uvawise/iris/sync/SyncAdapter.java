@@ -374,11 +374,19 @@ class SyncAdapter extends AbstractThreadedSyncAdapter {
                 }
 
                 for (Message msgID : addedMessages) {
-                    addMessage(credential, msgID.getId(), batch);
+                    try {
+                        addMessage(credential, msgID.getId(), batch);
+                    } catch(IOException | MessagingException | NullPointerException e){
+                        Log.e(TAG,"Error adding message. "+e.getMessage());
+                    }
                 }
 
                 for (Message msgID : deletedMessages) {
-                    deleteMessage(msgID.getId(), batch);
+                    try{
+                        deleteMessage(msgID.getId(), batch);
+                    } catch(NullPointerException e){
+                        Log.e(TAG,"Error deleting message. "+e.getMessage());
+                    }
                 }
 
                 GmailUtils.setCurrentHistoryID(context, userID, newHistID);
