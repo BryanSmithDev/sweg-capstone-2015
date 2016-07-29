@@ -4,8 +4,11 @@ This is the repository for the UVA-Wise Software Engineering Capstone for 2015-2
 
 ###Team###
 Bryan Smith
+
 Scott Arnette
+
 Joseph LaCava
+
 Derek Ouzia
 
 ###About Iris###
